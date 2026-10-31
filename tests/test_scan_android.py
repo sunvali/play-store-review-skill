@@ -100,6 +100,74 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(data["sdk"]["minSdk"][0]["value"], 26)
         self.assertIn("ads", {i["category"] for i in data["dependencies"]["items"]})
 
+    def project(self, files):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d)
+        for rel, text in files.items():
+            os.makedirs(os.path.dirname(os.path.join(d, rel)) or d, exist_ok=True)
+            with open(os.path.join(d, rel), "w") as f:
+                f.write(text)
+        return d
+
+    def test_app_sdk_prefers_shared_script_over_wear_module(self):
+        d = self.project({
+            "common.gradle": "android {\n    compileSdk 36\n    defaultConfig { targetSdk propTarget.toInteger() }\n}\n",
+            "gradle.properties": "propTarget=36\n",
+            "app/build.gradle": 'apply plugin: "com.android.application"\nandroid {\n    defaultConfig { applicationId "a.b" }\n}\n',
+            "app-wearos/build.gradle": 'android {\n    defaultConfig { applicationId "a.w"\n targetSdk 34\n }\n}\n'})
+        app = scan(d)[1]["sdk"]["app"]["targetSdk"]
+        self.assertEqual((app["value"], app["file"]), (36, "common.gradle"))
+
+    def test_constant_in_convention_plugin(self):
+        d = self.project({
+            "build-plugin/src/main/kotlin/app.gradle.kts": "android {\n    defaultConfig { targetSdk = Config.sdkTarget }\n}\n",
+            "build-plugin/src/main/kotlin/Config.kt": "object Config {\n    const val sdkTarget = 36\n}\n"})
+        self.assertEqual(scan(d)[1]["sdk"]["app"]["targetSdk"]["value"], 36)
+
+    def test_agp9_release_from_catalog_and_demo_module_is_not_the_app(self):
+        block = "android {\n    compileSdk {\n        version = release(libs.versions.compileSdk.get().toInt())\n    }\n    defaultConfig { applicationId \"a.b\" }\n}\n"
+        d = self.project({"gradle/libs.versions.toml": '[versions]\ncompileSdk = "37"\n',
+                          "app/build.gradle.kts": block, "demo/camera/build.gradle.kts": block.replace("libs.versions.compileSdk.get().toInt()", "33")})
+        app = scan(d)[1]["sdk"]["app"]["compileSdk"]
+        self.assertEqual((app["value"], app["scope"]), (37, "app"))
+
+    def test_catalog_bundle_and_add_form(self):
+        d = self.project({
+            "gradle/libs.versions.toml": '[libraries]\nfcm = { module = "com.google.firebase:firebase-messaging", version = "24.0.0" }\n'
+                                         'ads = { module = "com.google.android.gms:play-services-ads", version = "23.0.0" }\n'
+                                         '[bundles]\ngplay = [\n  "fcm",\n]\n',
+            "app/build.gradle.kts": 'android {\n}\ndependencies {\n    add(flavor, libs.bundles.gplay)\n    implementation(libs.ads)\n}\n'})
+        names = {i["name"] for i in scan(d)[1]["dependencies"]["items"]}
+        self.assertEqual(names, {"com.google.firebase:firebase-messaging", "com.google.android.gms:play-services-ads"})
+
+    def test_permissions_name_module_and_source_set(self):
+        manifest = '<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/></manifest>'
+        d = self.project({"app/src/website/AndroidManifest.xml": manifest})
+        p = scan(d)[1]["permissions"][0]
+        self.assertEqual((p["module"], p["source_set"]), ("app", "website"))
+
+    def test_flavor_removal_is_linked_to_main_permission(self):
+        head = '<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">'
+        name = 'android:name="android.permission.REQUEST_INSTALL_PACKAGES"'
+        d = self.project({"app/src/main/AndroidManifest.xml": head + "<uses-permission %s/></manifest>" % name,
+                          "app/src/gplay/AndroidManifest.xml": head + '<uses-permission %s tools:node="remove"/></manifest>' % name})
+        main = [p for p in scan(d)[1]["permissions"] if p["source_set"] == "main"][0]
+        self.assertEqual(main["removed_in"], ["gplay"])
+
+    def test_expo_config_override_and_missing_override(self):
+        pkg = '{"dependencies":{"expo":"58.0.0"}}'
+        d = self.project({"package.json": pkg, "app.config.js": "export default { plugins: [['expo-build-properties', {android: {targetSdkVersion: 36}}]] }\n"})
+        data = scan(d)[1]
+        self.assertEqual(data["sdk"]["app"]["targetSdk"]["value"], 36)
+        self.assertEqual(data["project_kind"]["expo"]["expoPackage"], "58.0.0")
+        self.assertTrue(any("Expo sets the default" in u for u in scan(self.project({"package.json": pkg}))[1]["unknown"]))
+
+    def test_dangling_symlink_is_not_an_error(self):
+        d = self.project({"app/build.gradle": "android {\n}\n"})
+        os.symlink("missing.txt", os.path.join(d, "app", "title.txt"))
+        code, data = scan(d)
+        self.assertEqual((code, data["errors"]), (0, []))
+
     def test_output_is_deterministic_and_sectioned(self):
         a = run(os.path.join(FIX, "rn"))[1]
         self.assertEqual(a, run(os.path.join(FIX, "rn"))[1])

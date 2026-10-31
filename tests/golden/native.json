@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "tool_version": "1.0.0",
+  "tool_version": "1.2.0",
   "project_kind": {
     "primary": "native-gradle",
     "all": [
@@ -8,7 +8,8 @@
     ],
     "markers": [
       "app/build.gradle.kts"
-    ]
+    ],
+    "markerCount": 1
   },
   "modules": [
     {
@@ -80,7 +81,31 @@
         "confidence": "declared",
         "value": "27.0.12077973"
       }
-    ]
+    ],
+    "app": {
+      "compileSdk": {
+        "file": "app/build.gradle.kts",
+        "line": 8,
+        "confidence": "resolved",
+        "expr": "libs.versions.compileSdk.get().toInt()",
+        "value": 35,
+        "scope": "app"
+      },
+      "minSdk": {
+        "file": "app/build.gradle.kts",
+        "line": 12,
+        "confidence": "declared",
+        "value": 24,
+        "scope": "app"
+      },
+      "targetSdk": {
+        "file": "app/build.gradle.kts",
+        "line": 13,
+        "confidence": "declared",
+        "value": 35,
+        "scope": "app"
+      }
+    }
   },
   "build": {
     "gradle": [
@@ -133,15 +158,19 @@
       "confidence": "declared",
       "alternative": "Declare only the matching foreground service type and complete the Console declaration",
       "class": "foreground-service",
+      "module": "app",
       "permission": "android.permission.FOREGROUND_SERVICE_CAMERA",
-      "source": "manifest"
+      "source": "manifest",
+      "source_set": "main"
     },
     {
       "file": "app/src/main/AndroidManifest.xml",
       "line": 3,
       "confidence": "declared",
+      "module": "app",
       "permission": "android.permission.INTERNET",
-      "source": "manifest"
+      "source": "manifest",
+      "source_set": "main"
     },
     {
       "file": "app/src/main/AndroidManifest.xml",
@@ -149,8 +178,10 @@
       "confidence": "declared",
       "alternative": "Photo Picker (PickVisualMedia / ACTION_PICK_IMAGES)",
       "class": "restricted-declaration",
+      "module": "app",
       "permission": "android.permission.READ_MEDIA_IMAGES",
-      "source": "manifest"
+      "source": "manifest",
+      "source_set": "main"
     },
     {
       "file": "app/src/main/AndroidManifest.xml",
@@ -158,8 +189,10 @@
       "confidence": "declared",
       "alternative": "SMS Retriever or SMS User Consent API",
       "class": "restricted-declaration",
+      "module": "app",
       "permission": "android.permission.READ_SMS",
-      "source": "manifest"
+      "source": "manifest",
+      "source_set": "main"
     },
     {
       "file": "app/src/main/AndroidManifest.xml",
@@ -168,8 +201,10 @@
       "alternative": "Photo Picker or scoped storage",
       "class": "must-have-core-use",
       "maxSdkVersion": "28",
+      "module": "app",
       "permission": "android.permission.WRITE_EXTERNAL_STORAGE",
-      "source": "manifest"
+      "source": "manifest",
+      "source_set": "main"
     },
     {
       "file": "app/src/main/AndroidManifest.xml",
@@ -177,9 +212,11 @@
       "confidence": "declared",
       "alternative": "Remove with tools:node=\"remove\" if the app has no ads or attribution use",
       "class": "advertising-id",
+      "module": "app",
       "permission": "com.google.android.gms.permission.AD_ID",
       "removed": true,
-      "source": "manifest"
+      "source": "manifest",
+      "source_set": "main"
     }
   ],
   "components": [

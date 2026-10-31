@@ -5,7 +5,7 @@ license: MIT. See LICENSE.txt
 compatibility: Uses python3 for the bundled scripts when available and works without it. Browsing is optional but improves accuracy.
 metadata:
   author: sunvali
-  version: "2.0.0"
+  version: "2.1.0"
   last-updated: "2026-10-31"
 ---
 
@@ -45,7 +45,7 @@ Copy this checklist and work through it:
 python3 -B scripts/scan_android.py PROJECT_DIR --output /tmp/play-facts.json
 ```
 
-Paths are relative to this skill's folder. Add `--artifact app-release.apk` or `.aab` if a release build exists, since only a built artifact shows the real merged manifest and native libraries. Everything in the scanner's `unknown` list goes into "Could not verify" unless you resolve it another way.
+Paths are relative to this skill's folder. Read `sdk.app` for the installed app's values: its `scope` says where each came from, and other entries may belong to libraries, demos, or other form factors. Add `--artifact app-release.apk` or `.aab` if a release build exists, since only a built artifact shows the real merged manifest and native libraries. Everything in the scanner's `unknown` list goes into "Could not verify" unless you resolve it another way.
 
 If Python is unavailable, gather the same facts by hand: `targetSdk` and SDK versions, all manifests, dependencies, `.so` files, and Expo or Flutter config.
 
@@ -103,6 +103,9 @@ Fix what it reports and rerun until it passes. If Python is unavailable, check t
 | Other restricted permission, use traced to a feature | Confirmed |
 | Other restricted permission, no use found | Verify, and suggest removing it |
 | Permission blocked with `tools:node="remove"` or Expo `blockedPermissions` | Not a finding, unless a release artifact shows it |
+| Permission with `removed_in` naming the Play flavor | Not a finding, unless a release artifact shows it |
+| Restricted permission in an app already live on Play, declaration state unknown | Verify, naming the declaration to confirm. The live listing may already hold approval |
+| Permission only in a demo module, or in a `source_set` that is not `main` or the Play flavor | Not a finding once you confirm which build goes to Play. If you cannot confirm it, Verify |
 | Non-Play checkout for digital goods, program enrollment unknown | Verify, with the answer for each region |
 | Non-Play checkout for physical goods | Not a finding |
 | Disclosure screen exists | Check that the first collection call runs after consent before passing it |

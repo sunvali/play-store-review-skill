@@ -22,7 +22,7 @@ import sys
 import zipfile
 import xml.etree.ElementTree as ET
 
-TOOL_VERSION = "1.0.0"
+TOOL_VERSION = "1.2.0"
 SECTIONS = ["project_kind", "modules", "sdk", "build", "permissions", "components",
             "dependencies", "native", "listing", "secrets"]
 MAX_TEXT = 2 * 1024 * 1024          # per file
@@ -34,6 +34,8 @@ ZIP_MAX_ENTRIES = 20000
 ZIP_MAX_BYTES = 2 * 1024 ** 3       # declared uncompressed total
 SKIP_DIRS = {".git", "node_modules", ".gradle", ".idea", "Pods", ".dart_tool", ".expo", "__pycache__"}
 SKIP_SOURCE_SETS = {"debug", "test", "androidTest", "testFixtures"}
+NON_APP_MODULE = re.compile(r"(^|/|-)(demo|demos|sample|samples|example|examples|\w*benchmark\w*|baseline\w*|test\w*|screener)(/|-|$)", re.I)
+BUILD_LOGIC_KT = re.compile(r"(^|/)(buildSrc|build-logic|build-plugin|convention\w*)/.*\.kt$")
 MERGED_DIRS = ("merged_manifests", "merged_manifest", "packaged_manifests")
 ANDROID = "{http://schemas.android.com/apk/res/android}"
 TOOLS = "{http://schemas.android.com/tools}"
@@ -123,6 +125,8 @@ def read_bytes(ctx, rel):
     try:
         size = os.path.getsize(p)
         if size > MAX_TEXT:
+            if rel.endswith((".txt", "verification-metadata.xml")):
+                return None
             ctx["unknown"].append("%s is %d bytes, over the 2 MB read cap, so it was not read: inspect it by hand." % (rel, size))
             return None
         ctx["budget"] -= size
@@ -170,6 +174,8 @@ def walk(ctx):
         dirs[:] = keep
         for f in sorted(fns):
             full = os.path.join(dp, f)
+            if os.path.islink(full) and not os.path.exists(full):
+                continue
             if os.path.islink(full) and escapes(ctx, full):
                 ctx["unknown"].append("Symlink %s points outside the project and was not read: copy the real file in to scan it." % os.path.relpath(full, root))
                 continue
@@ -209,6 +215,9 @@ def parse_catalog(text):
         parts = coord.split(":")
         ver = versions.get(ref.group(1)) if ref else (lit.group(1) if lit else (parts[2] if len(parts) > 2 else None))
         (libs if sec == "libraries" else plugins)[norm(key)] = (":".join(parts[:2]) if sec == "libraries" else coord, ver, n)
+    bundles = re.search(r"^\[bundles\](.*?)(?=^\[|\Z)", text, re.M | re.S)
+    for key, members in re.findall(r"^([\w.\-]+)\s*=\s*\[(.*?)\]", bundles.group(1) if bundles else "", re.M | re.S):
+        libs["bundle:" + norm(key)] = [norm(m) for m in re.findall(r"\"([^\"]+)\"", members)]
     return versions, libs, plugins
 
 
@@ -223,6 +232,7 @@ def find_var(ctx, name, value=r"(\d+)"):
 
 def resolve(ctx, expr, numeric=True):
     """Resolve a Gradle expression to a literal through version catalogs and ext/properties vars."""
+    expr = re.sub(r"\.(toInt|toInteger|toString|get)\(\)", "", expr)
     m = re.search(r"libs\.versions\.([\w.]+)", expr)
     if m:
         key = norm(re.sub(r"(\.(get|toInt|toString|asProvider))+$", "", m.group(1)))
@@ -240,9 +250,13 @@ def resolve(ctx, expr, numeric=True):
 def num_setting(ctx, rel, text, names):
     """First `name 34` / `name = 34` / `name = ext.expr` in a module file."""
     for name in names:
-        m = re.search(r"\b%s\s*\{[^}]*?\brelease\((\d+)\)" % name, text)  # AGP 9 compileSdk { version = release(36) }
+        m = re.search(r"\b%s\s*\{[^}]*?\brelease\(([^\n{]*)\)" % name, text)  # AGP 9 compileSdk { version = release(36) }
         if m:
-            return fact(rel, line_of(text, m.start()), "declared", value=int(m.group(1)))
+            ln, rest = line_of(text, m.start()), m.group(1).strip()
+            val = rest if rest.isdigit() else resolve(ctx, rest)
+            if val is not None and str(val).isdigit():
+                return fact(rel, ln, "declared" if rest.isdigit() else "resolved", value=int(val))
+            return fact(rel, ln, "inferred", expr=rest)
         m = re.search(r"\b%s\b[ \t]*(?:=[ \t]*)?\(?[ \t]*([^\n;}]+)" % name, text)  # one-line blocks separate with ;
         if not m:
             continue
@@ -252,7 +266,7 @@ def num_setting(ctx, rel, text, names):
         if lit:
             return fact(rel, ln, "declared", value=int(lit.group(1)))
         val = resolve(ctx, rest)
-        if val is not None:
+        if val is not None and str(val).isdigit():
             return fact(rel, ln, "resolved", value=int(val), expr=rest)
         return fact(rel, ln, "inferred", expr=rest)
     return None
@@ -315,12 +329,24 @@ def do_gradle(ctx, out):
         m = re.search(r"\buseLegacyPackaging\b\s*=?\s*(true|false)", text)
         if m:
             build["gradle"].append(fact(rel, line_of(text, m.start()), "declared", useLegacyPackaging=m.group(1) == "true"))
+    for rel in sorted(ctx["gradle"]):  # common.gradle and convention plugins hold values for many modules
+        if re.search(r"\.gradle(\.kts)?$", rel) and not re.search(r"(^|/)(build|settings)\.gradle(\.kts)?$", rel):
+            for key, names in (("targetSdk", ("targetSdk", "targetSdkVersion")), ("minSdk", ("minSdk", "minSdkVersion")),
+                               ("compileSdk", ("compileSdk", "compileSdkVersion"))):
+                f = num_setting(ctx, rel, ctx["gradle"][rel], names)
+                if f:
+                    sdk[key].append(f)
     for rel in sorted(ctx["gradle"]):
         text = ctx["gradle"][rel]
         ndk = re.search(r"\bndkVersion\b\s*=?\s*([^\n]+)", text) if re.search(r"\.gradle(\.kts)?$", rel) else None
         if ndk:
-            lit = re.match(r"[\"']([^\"']+)", ndk.group(1).strip())
-            sdk["ndk"].append(fact(rel, line_of(text, ndk.start()), "declared", **({"value": lit.group(1)} if lit else {"expr": ndk.group(1).strip()})))
+            expr = ndk.group(1).strip()
+            lit = re.match(r"[\"']([^\"'$]+)", expr)
+            val = lit.group(1) if lit else (None if "$" in expr else resolve(ctx, expr, numeric=False))
+            if val and val[0].isdigit():
+                sdk["ndk"].append(fact(rel, line_of(text, ndk.start()), "declared" if lit else "resolved", value=val))
+            else:
+                sdk["ndk"].append(fact(rel, line_of(text, ndk.start()), "inferred", expr=expr))
     ag = first_version(ctx, [r"com\.android\.tools\.build:gradle:([\d][\w.\-]*)",
                              r"com\.android\.(?:application|library)[\"']\)?\s+version\s+[\"']([^\"']+)"],
                        ("agp", "com.android.application"))
@@ -338,6 +364,32 @@ def do_gradle(ctx, out):
     out["modules"] = ordered(modules)
     out["sdk"] = {k: ordered(v) for k, v in sdk.items()}
     out["build"] = build
+
+
+def app_sdk(ctx, out):
+    """Pick the values for the app people install, so a demo or library module cannot stand in for it."""
+    paths = {m["path"]: m["type"] for m in out["modules"]}
+
+    def rank(f):
+        path = os.path.dirname(f["file"]) or "."
+        if f.get("source") == "expo-build-properties":
+            return 0
+        if path not in paths:
+            return 1
+        if NON_APP_MODULE.search(path):
+            return 4
+        if re.search(r"wear|tv|automotive|car", path, re.I):
+            return 2
+        return 0 if paths[path] == "application" else 3
+
+    picks = {}
+    for key in ("targetSdk", "compileSdk", "minSdk"):
+        facts = sorted(out["sdk"].get(key, []), key=lambda f: (rank(f), f["file"]))
+        if facts:
+            picks[key] = dict(facts[0], scope=("app", "shared build script", "other form factor", "library", "demo or test")[rank(facts[0])])
+    out["sdk"]["app"] = dict(sorted(picks.items()))
+    if "value" not in picks.get("targetSdk", {}):
+        ctx["unknown"].append("The main app's targetSdk could not be read as a number: confirm it in Play Console's App bundle explorer or a release build before judging the target API requirement.")
 
 
 # ---------- manifests ----------
@@ -370,12 +422,14 @@ def do_manifest(ctx, out, rel, source, data=None):
         return
     text = data.decode("utf-8", "replace")
     conf = "resolved" if source != "manifest" else "declared"
+    where = re.match(r"(?:(.+)/)?src/([^/]+)/", rel)
+    place = {"module": where.group(1) or ".", "source_set": where.group(2)} if where else {}
     for el in root.iter():
         name = el.get(ANDROID + "name")
         if el.tag in PERM_TAGS and name:
             out["permissions"].append(perm_fact(
                 ctx, name, source, rel, line_of(text, name), conf, maxSdkVersion=el.get(ANDROID + "maxSdkVersion"),
-                removed=True if (el.get(TOOLS + "node") or "").startswith("remove") else None))
+                removed=True if (el.get(TOOLS + "node") or "").startswith("remove") else None, **place))
         elif el.tag == "application":
             for k in ("allowBackup", "usesCleartextTraffic", "debuggable", "extractNativeLibs", "networkSecurityConfig"):
                 if el.get(ANDROID + k) is not None:
@@ -404,6 +458,14 @@ def do_manifests(ctx, out, files, merged):
         do_manifest(ctx, out, rel, "manifest")
     for rel in merged:
         do_manifest(ctx, out, rel, "merged")
+    removed = {}
+    for f in out["permissions"]:
+        if f.get("removed") and f.get("source_set"):
+            removed.setdefault((f["module"], f["permission"]), []).append(f["source_set"])
+    for f in out["permissions"]:  # a flavor can strip what main declares
+        hit = removed.get((f.get("module"), f["permission"]))
+        if hit and not f.get("removed"):
+            f["removed_in"] = sorted(hit)
 
 
 # ---------- dependencies ----------
@@ -425,6 +487,16 @@ def do_dependencies(ctx, out, files):
         if key not in seen or conf == "resolved":
             seen[key] = (ver, line, conf)
 
+    def catalog_put(accessor, rel, n):
+        if accessor.startswith(("versions", "plugins")):
+            return
+        name = re.sub(r"\.(get|asProvider)$", "", accessor)
+        for _, libs, _, _ in ctx["catalogs"]:
+            keys = libs.get("bundle:" + norm(name[8:]), []) if name.startswith("bundles.") else [norm(name)]
+            for key in keys:
+                if key in libs:
+                    put("gradle", libs[key][0], libs[key][1], rel, n, "resolved")
+
     conf_re = re.compile(r"^\s*(\w+)\s*\(?\s*(.*)$")
     for rel in sorted(ctx["gradle"]):
         text = ctx["gradle"][rel]
@@ -439,6 +511,9 @@ def do_dependencies(ctx, out, files):
         # one-line blocks: dependencies { implementation("a:b:1") }
         statements = [(n, s) for n, line in enumerate(text.splitlines(), 1) for s in re.split(r"[{;]", line)]
         for n, line in statements:
+            added = re.match(r"\s*add\(\s*([^,]+),\s*libs\.([\w.]+)", line)
+            if added and "test" not in added.group(1).lower():
+                catalog_put(added.group(2), rel, n)
             m = conf_re.match(line)
             if not m or not re.fullmatch(r"(?:\w+)?(?:[Ii]mplementation|[Aa]pi|[Cc]ompileOnly|[Rr]untimeOnly)|classpath|kapt|ksp", m.group(1)) \
                     or m.group(1).startswith(("test", "androidTest")):
@@ -454,11 +529,8 @@ def do_dependencies(ctx, out, files):
                 put("gradle", lit.group(1), ver, rel, n, conf)
                 continue
             acc = re.search(r"\blibs\.([\w.]+)", rest)
-            if acc and not acc.group(1).startswith(("versions", "bundles", "plugins")):
-                key = norm(re.sub(r"\.(get|asProvider)$", "", acc.group(1)))
-                for _, libs, _, _ in ctx["catalogs"]:
-                    if key in libs:
-                        put("gradle", libs[key][0], libs[key][1], rel, n, "resolved")
+            if acc:
+                catalog_put(acc.group(1), rel, n)
     for rel in files:
         base = rel.rsplit("/", 1)[-1]
         if base == "pubspec.yaml":
@@ -556,7 +628,7 @@ def do_kind(ctx, out, files):
         mark("cordova", "package.json")
     order = ["expo", "react-native", "flutter", "capacitor", "cordova", "unity", "kmp", "native-gradle"]
     kinds = sorted(set(kinds), key=order.index)
-    out["project_kind"] = {"primary": kinds[0] if kinds else "unknown", "all": kinds, "markers": sorted(set(markers))}
+    out["project_kind"] = {"primary": kinds[0] if kinds else "unknown", "all": kinds, "markers": sorted(set(markers))[:20], "markerCount": len(set(markers))}
     if not kinds:
         ctx["unknown"].append("No Android project markers (Gradle android block, pubspec.yaml, package.json, app.json) were found under PROJECT_DIR: point the scan at the project root.")
     has_android_dir = any(f.startswith("android/") or "/android/" in f for f in files)
@@ -564,6 +636,10 @@ def do_kind(ctx, out, files):
         do_flutter(ctx, out, files)
     if "expo" in kinds:
         do_expo(ctx, out, files, app_json, expo_cfg, has_android_dir)
+        if pkg_deps.get("expo"):
+            out["project_kind"]["expo"]["expoPackage"] = trunc(pkg_deps["expo"])
+        if not out["sdk"]["targetSdk"]:
+            ctx["unknown"].append("Expo sets the default target API from its SDK version and no override was found: confirm the targetSdk of a release build against the current requirement.")
     return kinds
 
 
@@ -610,6 +686,10 @@ def do_expo(ctx, out, files, app_json, cfg, has_android_dir):
     for rel in files:
         if re.match(r"app\.config\.(js|ts|cjs|mjs)$", rel):
             text = read_text(ctx, rel) or ""
+            for key, src in (("targetSdk", "targetSdkVersion"), ("compileSdk", "compileSdkVersion"), ("minSdk", "minSdkVersion")):
+                m = re.search(r"\b%s\s*:\s*(\d+)" % src, text)
+                if m:
+                    out["sdk"][key].append(fact(rel, line_of(text, m.start()), "inferred", value=int(m.group(1)), source="expo-build-properties"))
             for key, flag in (("permissions", {}), ("blockedPermissions", {"blocked": True})):
                 for m in re.finditer(r"(?<![A-Za-z])%s\s*:\s*\[(.*?)\]" % key, text, re.S):
                     for perm in re.findall(r"[\"']([\w.]+)[\"']", m.group(1)):
@@ -793,7 +873,7 @@ def scan(root, artifact):
     files, merged = walk(ctx)
     for rel in files:
         base = rel.rsplit("/", 1)[-1]
-        if re.search(r"\.gradle(\.kts)?$|^gradle\.properties$|^gradle-wrapper\.properties$|\.lockfile$|\.versions\.toml$", base):
+        if re.search(r"\.gradle(\.kts)?$|^gradle\.properties$|^gradle-wrapper\.properties$|\.lockfile$|\.versions\.toml$", base) or BUILD_LOGIC_KT.search(rel):
             text = read_text(ctx, rel)
             if text is not None:
                 ctx["gradle"][rel] = text
@@ -807,6 +887,7 @@ def scan(root, artifact):
            "secrets": [], "unknown": [], "errors": []}
     do_gradle(ctx, out)
     do_kind(ctx, out, files)
+    app_sdk(ctx, out)
     do_manifests(ctx, out, files, merged)
     do_dependencies(ctx, out, files)
     do_native(ctx, out, files)
@@ -816,8 +897,8 @@ def scan(root, artifact):
     do_secrets(ctx, out, files)
     if not merged and not artifact:
         ctx["unknown"].append("No merged manifest found under build/intermediates, so permissions contributed by libraries and SDKs are not visible: run a release build (for example ./gradlew :app:processReleaseMainManifest) and re-scan, or pass --artifact.")
-    if any(f.startswith(("buildSrc/", "build-logic/")) for f in files):
-        ctx["unknown"].append("Values computed in buildSrc or build-logic (convention plugins) are not resolved because Gradle is never run: inspect the release build or its merged manifest.")
+    if any(f.startswith(("buildSrc/", "build-logic/", "build-plugin/")) for f in files):
+        ctx["unknown"].append("Values computed in convention plugins are only partly resolved because Gradle is never run: inspect the release build or its merged manifest.")
     ctx["unknown"].append("Play Console state (Data safety form, app content declarations, testing track status, store listing text beyond fastlane files) is not in the repository: check it in Play Console.")
     out["permissions"] = ordered(out["permissions"])
     out["components"] = ordered(out["components"])
