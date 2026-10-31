@@ -1,0 +1,50 @@
+name: Skill feedback
+description: Report wrong, outdated, or missing guidance in the play-store-review skill
+title: "[Feedback] "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please don't include proprietary code, app names, or anything confidential.
+        The report is about the skill's rules, not your app.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feedback category
+      options:
+        - False positive - flagged compliant code
+        - False negative - missed an issue Google flagged
+        - Wrong citation - wrong policy or severity
+        - Outdated - contradicts Google's current policy
+        - Too noisy - too many low-value findings
+        - Not actionable - lacked detail or a concrete fix
+        - Bad fix - suggested remediation was wrong
+        - Missing rule - scenario or region the skill doesn't cover
+        - Contradiction - the skill disagrees with itself
+        - Trigger/weight - activates wrongly or uses too much context
+        - Unclear - confusing or hard to apply
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Skill version
+      placeholder: "1.0.0"
+  - type: input
+    id: section
+    attributes:
+      label: Policy or rule section
+      placeholder: "e.g. 2.6 Restricted permissions"
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What the skill did, and what should have happened
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Play review outcome (optional)
+      description: Share only what you're comfortable making public.

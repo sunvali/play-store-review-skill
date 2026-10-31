@@ -1,0 +1,12 @@
+{
+  "name": "play-store-review",
+  "description": "Evaluates Android apps against Google Play policies and release requirements",
+  "version": "1.0.0",
+  "author": {
+    "name": "sunvali"
+  },
+  "homepage": "https://github.com/sunvali/play-store-review-skill",
+  "repository": "https://github.com/sunvali/play-store-review-skill",
+  "license": "MIT",
+  "keywords": ["google-play", "android", "play-store", "review", "policy", "kotlin", "flutter", "react-native", "expo"]
+}

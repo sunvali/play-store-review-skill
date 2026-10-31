@@ -1,0 +1,25 @@
+{
+  "name": "play-store-review",
+  "version": "1.0.0",
+  "description": "Evaluates Android apps against Google Play policies and release requirements.",
+  "author": {
+    "name": "sunvali",
+    "url": "https://github.com/sunvali"
+  },
+  "homepage": "https://github.com/sunvali/play-store-review-skill",
+  "repository": "https://github.com/sunvali/play-store-review-skill",
+  "license": "MIT",
+  "keywords": ["google-play", "android", "play-store", "review", "policy", "kotlin", "flutter", "react-native", "expo"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Play Store Review",
+    "shortDescription": "Audit apps for Google Play review risk",
+    "longDescription": "Evaluate Android apps against Google Play policies and release gates before submission, with coverage for privacy, permissions, payments, ads, content, quality, and upcoming deadlines.",
+    "developerName": "sunvali",
+    "category": "Coding",
+    "capabilities": ["Read"],
+    "websiteURL": "https://github.com/sunvali/play-store-review-skill",
+    "defaultPrompt": ["Review this app for Google Play compliance."],
+    "brandColor": "#01875F"
+  }
+}
