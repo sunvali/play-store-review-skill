@@ -162,6 +162,136 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(data["project_kind"]["expo"]["expoPackage"], "58.0.0")
         self.assertTrue(any("Expo sets the default" in u for u in scan(self.project({"package.json": pkg}))[1]["unknown"]))
 
+    def test_catalog_nearest_the_module_and_multi_app(self):
+        app = 'plugins { id("com.android.application") }\nandroid { compileSdk = 36\n  defaultConfig { applicationId = "com.x"; minSdk = 24; targetSdk = libs.versions.targetSdk.get().toInt() } }\n'
+        d = self.project({"A/app/build.gradle.kts": app, "A/gradle/libs.versions.toml": '[versions]\ntargetSdk = "33"\n',
+                          "B/app/build.gradle.kts": app, "B/gradle/libs.versions.toml": '[versions]\ntargetSdk = "36"\n',
+                          "B/demo/build.gradle.kts": app})
+        sdk = scan(d)[1]["sdk"]
+        self.assertEqual([(a["module"], a["targetSdk"]) for a in sdk["apps"]], [("A/app", 33), ("B/app", 36)])
+        self.assertTrue(sdk["app"]["ambiguous"])
+
+    def test_demo_scope_is_never_the_app(self):
+        d = self.project({"demo/build.gradle.kts": 'plugins { id("com.android.application") }\nandroid { defaultConfig { targetSdk = 33 } }\n'})
+        data = scan(d)[1]
+        self.assertNotIn("targetSdk", data["sdk"]["app"])
+        self.assertEqual(data["sdk"]["apps"], [])
+        self.assertTrue(any("demo, sample" in u for u in data["unknown"]))
+
+    def test_configure_extension_and_multiline_assignment(self):
+        d = self.project({
+            "settings.gradle.kts": 'include(":app")\n', "gradle/libs.versions.toml": '[versions]\ntargetSdk = "37"\n',
+            "app/build.gradle.kts": 'plugins { alias(libs.plugins.android.application) }\nconfigure<ApplicationExtension> {\n    compileSdk = 36\n'
+                                    '    defaultConfig {\n        applicationId = "com.x"\n        minSdk = 29\n        targetSdk =\n            libs.versions.targetSdk\n'
+                                    '                .get()\n                .toInt()\n    }\n}\n',
+            "app/src/main/AndroidManifest.xml": '<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.READ_SMS"/></manifest>'})
+        data = scan(d)[1]
+        self.assertEqual(data["project_kind"]["primary"], "native-gradle")
+        self.assertEqual([(m["path"], m["type"]) for m in data["modules"]], [("app", "application")])
+        self.assertEqual({k: v["value"] for k, v in data["sdk"]["app"].items() if k != "ambiguous"}, {"compileSdk": 36, "minSdk": 29, "targetSdk": 37})
+        self.assertEqual(len(data["permissions"]), 1)
+
+    def test_module_identity(self):
+        d = self.project({
+            "gradle.properties": "APP_PACKAGE=com.from.props\n",
+            "build.gradle.kts": 'plugins { alias(libs.plugins.android.application) apply false }\nplugins.withId("com.android.application") { android { compileSdk = 30 } }\n',
+            "app/build.gradle.kts": 'plugins { id("com.android.application") }\nandroid {\n defaultConfig { applicationId = APP_PACKAGE }\n'
+                                    ' productFlavors {\n  create("play") { ndk { abiFilters += "arm64-v8a" } }\n  create("fdroid") { ext { x = 1 } }\n }\n}\n'})
+        data = scan(d)[1]
+        self.assertEqual([m["path"] for m in data["modules"]], ["app"])
+        self.assertEqual((data["modules"][0]["applicationId"], data["modules"][0]["flavors"]), ("com.from.props", ["fdroid", "play"]))
+
+    def test_sdk_values_in_convention_plugin_kotlin(self):
+        d = self.project({"app/build.gradle.kts": 'plugins { id("myapp.android.application") }\nandroid { namespace = "com.x" }\n',
+                          "build-logic/convention/src/main/kotlin/AppPlugin.kt": "class AppPlugin { fun apply() { extensions.configure<ApplicationExtension> { defaultConfig.targetSdk = 36; compileSdk = 37; defaultConfig.minSdk = 24 } } }\n"})
+        app = scan(d)[1]["sdk"]["app"]
+        self.assertEqual((app["targetSdk"]["value"], app["compileSdk"]["value"], app["minSdk"]["value"]), (36, 37, 24))
+        self.assertEqual(app["targetSdk"]["scope"], "shared build script")
+
+    def test_expo_ads_config_is_redacted(self):
+        d = self.project({"package.json": '{"dependencies":{"expo":"~55.0.0"}}',
+                          "app.json": '{"expo":{"android":{"config":{"googleMobileAdsAppId":"ca-app-pub-1~2"}},"plugins":[["react-native-google-mobile-ads",{"androidAppId":"ca-app-pub-1~2"}]]}}'})
+        out = run(d)[1]
+        self.assertNotIn("ca-app-pub-1~2", out)
+        items = {i["name"]: i for i in json.loads(out)["dependencies"]["items"]}
+        self.assertEqual(items["android.config.googleMobileAdsAppId"]["masked"], "ca-a...")
+        self.assertEqual(items["react-native-google-mobile-ads"]["category"], "ads")
+
+    def test_cordova_config(self):
+        cfg = ('<widget id="com.x" version="1.0"><platform name="android"><preference name="android-targetSdkVersion" value="34"/>'
+               '<config-file target="AndroidManifest.xml" parent="/manifest"><uses-permission android:name="android.permission.READ_SMS"/></config-file></platform>'
+               '<preference name="android-minSdkVersion" value="24"/><plugin name="cordova-plugin-camera" spec="^6"/><plugin name="cordova-admob-plus" spec="^1"/></widget>')
+        data = scan(self.project({"config.xml": cfg}))[1]
+        self.assertEqual(data["project_kind"]["primary"], "cordova")
+        self.assertEqual((data["sdk"]["app"]["targetSdk"]["value"], data["sdk"]["app"]["minSdk"]["value"]), (34, 24))
+        self.assertEqual([p["permission"] for p in data["permissions"]], ["android.permission.READ_SMS"])
+        self.assertEqual([i["name"] for i in data["dependencies"]["items"]], ["cordova-admob-plus"])
+        code, bad = scan(self.project({"config.xml": '<!DOCTYPE x [<!ENTITY a "b">]>' + cfg}))
+        self.assertTrue(any("DOCTYPE" in e for e in bad["errors"]))
+
+    def test_unity_settings_and_packages(self):
+        d = self.project({"ProjectSettings/ProjectVersion.txt": "m_EditorVersion: 6000.0.1f1\n",
+                          "ProjectSettings/ProjectSettings.asset": "PlayerSettings:\n  AndroidMinSdkVersion: 23\n  AndroidTargetSdkVersion: 0\n",
+                          "Packages/manifest.json": '{"dependencies":{"com.unity.purchasing":"4.12.2","com.unity.services.mediation":"1.0.0","com.unity.ads":"4.4.2","com.unity.services.analytics":"6.0.0","com.unity.ugui":"2.0.0"}}'})
+        data = scan(d)[1]
+        self.assertEqual(data["sdk"]["minSdk"][0]["value"], 23)
+        self.assertEqual((data["sdk"]["targetSdk"][0]["expr"], data["sdk"]["targetSdk"][0]["automatic"]), ("automatic (0)", True))
+        self.assertEqual({i["name"]: i["category"] for i in data["dependencies"]["items"]},
+                         {"com.unity.purchasing": "billing", "com.unity.services.mediation": "ads", "com.unity.ads": "ads", "com.unity.services.analytics": "analytics"})
+
+    def test_dependency_configuration_and_false_positives(self):
+        d = self.project({
+            "app/build.gradle.kts": 'plugins { id("com.android.application") }\nandroid { defaultConfig { applicationId = "com.x" } }\ndependencies {\n'
+                                    '  "playImplementation"("com.android.billingclient:billing:7.0.0")\n  standardImplementation("com.google.android.gms:play-services-ads-identifier:18.0.0")\n'
+                                    '  implementation("com.google.androidbrowserhelper:billing:2.5.0")\n}\n',
+            "buildscript-gradle.lockfile": "org.tensorflow:tensorflow-lite-metadata:0.2.0=classpath\n",
+            "pubspec.yaml": "name: x\ndependencies:\n  in_app_purchase: ^3.0.0\n  in_app_purchase_storekit: ^0.3.0\n  google_mobile_ads_web: ^1.0.0\n"})
+        items = scan(d)[1]["dependencies"]["items"]
+        got = {(i["name"], i["category"], i.get("configuration")) for i in items}
+        self.assertEqual(got, {("com.android.billingclient:billing", "billing", "playImplementation"),
+                               ("com.google.android.gms:play-services-ads-identifier", "attribution", "standardImplementation"),
+                               ("com.google.androidbrowserhelper:billing", "billing", "implementation"),
+                               ("in_app_purchase", "billing", None)})
+
+    def test_manifest_selection(self):
+        head = '<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.%s"/></manifest>'
+        d = self.project({
+            "app/build.gradle": 'plugins { id "com.android.application" }\nandroid { sourceSets { release { manifest.srcFile \'config/release/AndroidManifest_prod.xml\' } } }\n',
+            "app/config/release/AndroidManifest_prod.xml": head % "ACCESS_BACKGROUND_LOCATION",
+            "app/config/debug/AndroidManifest.xml": head % "SYSTEM_ALERT_WINDOW",
+            "app/src/freeDebug/AndroidManifest.xml": head % "READ_SMS",
+            "app/src/main/AndroidManifest.xml": head % "CAMERA"})
+        got = {(p["permission"].split(".")[-1], p["source_set"]) for p in scan(d)[1]["permissions"]}
+        self.assertEqual(got, {("ACCESS_BACKGROUND_LOCATION", "release"), ("CAMERA", "main")})
+
+    def test_npm_outside_project_root_is_not_counted(self):
+        d = self.project({"app/build.gradle.kts": 'plugins { id("com.android.application") }\nandroid { }\n',
+                          "website/package.json": '{"dependencies":{"@sentry/react-native":"^6"}}'})
+        data = scan(d)[1]
+        self.assertEqual(data["dependencies"]["items"], [])
+        self.assertTrue(any("website/package.json" in u and "outside" in u for u in data["unknown"]))
+
+    def test_may_add_permissions(self):
+        gradle = 'plugins { id("com.android.application") }\nandroid { }\ndependencies { implementation("com.google.firebase:firebase-analytics-ktx:22.0.0") }\n'
+        head = '<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">%s</manifest>'
+        data = scan(self.project({"app/build.gradle.kts": gradle}))[1]
+        hit = data["dependencies"]["mayAddPermissions"][0]
+        self.assertEqual((hit["dependency"], hit["mayAdd"], hit["basis"]), ("com.google.firebase:firebase-analytics-ktx", ["com.google.android.gms.permission.AD_ID"], "field report, verify in the merged manifest"))
+        removed = head % '<uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>'
+        self.assertEqual(scan(self.project({"app/build.gradle.kts": gradle, "app/src/main/AndroidManifest.xml": removed}))[1]["dependencies"]["mayAddPermissions"], [])
+        expo = scan(self.project({"package.json": '{"dependencies":{"expo":"~55","expo-audio":"1","expo-video":"1"}}',
+                                  "app.json": '{"expo":{"android":{"blockedPermissions":["FOREGROUND_SERVICE_MEDIA_PLAYBACK"]}}}'}))[1]
+        self.assertEqual(expo["dependencies"]["mayAddPermissions"], [])
+
+    def test_output_flag_prints_one_summary_line(self):
+        out = os.path.join(tempfile.mkdtemp(), "facts.json")
+        self.addCleanup(shutil.rmtree, os.path.dirname(out))
+        code, text, _ = run(os.path.join(FIX, "rn"), "--output", out)
+        self.assertEqual(len(text.strip().splitlines()), 1)
+        self.assertIn("wrote", text)
+        with open(out) as f:
+            self.assertEqual(json.load(f)["tool_version"], "1.3.0")
+
     def test_dangling_symlink_is_not_an_error(self):
         d = self.project({"app/build.gradle": "android {\n}\n"})
         os.symlink("missing.txt", os.path.join(d, "app", "title.txt"))
@@ -234,10 +364,12 @@ class HostileTests(unittest.TestCase):
         os.makedirs(os.path.join(self.proj, "app2", "src", "main"))
         with open(os.path.join(self.proj, "app2", "src", "main", "AndroidManifest.xml"), "w") as f:
             f.write('<manifest xmlns:android="http://schemas.android.com/apk/res/android">%s</manifest>' % lines)
-        full = os.path.join(self.tmp, "facts.json")
-        code, out, _ = run(self.proj, "--output", full)
+        out = run(self.proj)[1]
         self.assertLess(len(out), 20000)
         self.assertTrue(json.loads(out)["truncated"])
+        full = os.path.join(self.tmp, "facts.json")
+        _, line, _ = run(self.proj, "--output", full)
+        self.assertEqual(len(line.strip().splitlines()), 1)
         with open(full) as f:
             self.assertEqual(len(json.load(f)["permissions"]), 600)
 

@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.2.0 - 2026-10-31
+
+Tested against real rejected apps, real installs, more project types, and Haiku.
+
+### Fixed
+
+- Script commands now work from any directory, which most agents need
+- Blocked at the door holds only confirmed gates
+- Scanner fixes for 13 issues found on real apps, including catalogs per project, `configure<ApplicationExtension>`, multi-line values, convention plugins, and flavor-specific dependencies
+
+### Added
+
+- Install routes for GitHub Copilot, Gemini CLI, and agents reached through `npx skills` or a folder copy
+- Rules to compare each Console answer with the code, to find every instance of a user-reachable problem, and to rank candidates when a notice is vague
+- A rule against stating unsourced facts, such as framework defaults
+- `sdk.apps`, `mayAddPermissions`, and Cordova and Unity support in the scanner
+- Rejection playbook rows from real cases
+- About 80 confirmed SDK signatures, and corrections to three wrong ones
+
 ## 2.1.0 - 2026-10-31
 
 Tested on eight open-source Android apps, and fixed what they exposed.

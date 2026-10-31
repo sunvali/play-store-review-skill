@@ -213,6 +213,8 @@ Flag **SMS and call log** and any "must be removed" item from the manifest alone
 
 **Health Connect.** Only a health or fitness feature in an approved use case may request it. No headless access (a clear icon is required). Not for apps solely for children. No syncing between incompatible platforms. Data may not go to ads, brokers, credit decisions, or uncleared medical devices. Human access is restricted. Request the minimum scope. Privacy policy plus help text on managing and deleting data. Secure transmission.
 
+Policy names system pickers as the alternative, so a feature that lets users pick a few photos, such as attachments in a support chat, does not justify a broad media permission.
+
 **Field report** (not policy): the most corroborated rejection is `READ_MEDIA_IMAGES` or `READ_MEDIA_VIDEO` added by a plugin or library, where the app only needs a picker. Console wording seen: one-time or infrequent access, and not related to core purpose. Rewording the in-app prompt did not fix it. Remove with `tools:node="remove"`, switch to the Photo Picker, and fix Data safety. It can return after a rebuild because the merge re-adds it. Also seen: media-playback foreground-service permissions merged by Expo libraries, and debug-only permissions leaking into release builds.
 
 **Source conflict, location button.** The Policy Deadlines table calls the button the "recommended minimum scope". The policy page and the 2026-10-29 announcement call it mandatory for API 37+ from 2027-01-27. Report the conflict, rely on the policy wording, and do not raise it as a current violation.

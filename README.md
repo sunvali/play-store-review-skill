@@ -8,14 +8,25 @@ An agent skill that audits Android apps against the Google Play Developer Progra
 
 ## Installation
 
+The skill is one self-contained folder that follows the [Agent Skills](https://agentskills.io) format, so most agents can load it with no changes.
+
 ### Claude Code
 
-```bash
+Inside Claude Code:
+
+```text
 /plugin marketplace add sunvali/play-store-review-skill
+/plugin install play-store-review@play-store-review
+```
+
+Or from a shell:
+
+```bash
+claude plugin marketplace add sunvali/play-store-review-skill
 ```
 
 ```bash
-/plugin install play-store-review@play-store-review
+claude plugin install play-store-review@play-store-review
 ```
 
 ### Codex
@@ -24,17 +35,47 @@ An agent skill that audits Android apps against the Google Play Developer Progra
 codex plugin marketplace add sunvali/play-store-review-skill
 ```
 
-Then run `/plugins`, choose the Play Store Review marketplace, and install `play-store-review`.
+```bash
+codex plugin add play-store-review@play-store-review
+```
 
-### skills.sh
+### GitHub Copilot
+
+Needs `gh` 2.90 or newer:
 
 ```bash
-npx skills add sunvali/play-store-review-skill
+gh skill install sunvali/play-store-review-skill play-store-review --agent github-copilot --scope user
+```
+
+### Gemini CLI
+
+```bash
+gemini skills install https://github.com/sunvali/play-store-review-skill --path skills/play-store-review --scope user --consent
+```
+
+### Most other agents
+
+[`npx skills`](https://github.com/vercel-labs/skills) installs for many agents. Choose yours with `-a`. Add `-g` for your user account, or leave it out to install into the current project:
+
+```bash
+npx skills add sunvali/play-store-review-skill -g -a cursor
 ```
 
 ### By hand
 
-Copy `skills/play-store-review/` into your agent's skills folder. It is self-contained.
+Copy `skills/play-store-review` into your agent's skills folder:
+
+| Agent | User folder |
+|-------|-------------|
+| Cursor, OpenCode, Roo Code, Kilo Code, Goose, Zed, Warp, Junie, Qwen Code, Windsurf | `~/.agents/skills/` |
+| Claude Code | `~/.claude/skills/` |
+| Cline | `~/.cline/skills/` |
+| Kiro | `~/.kiro/skills/` |
+| Amp | `~/.config/agents/skills/` |
+
+Python 3 is optional. Without it, the agent gathers the same facts by hand.
+
+Tested installs: Claude Code, Codex, `gh skill`, `npx skills`, and copying the folder. The other routes follow each agent's documentation and have not been tested here.
 
 ## Usage
 

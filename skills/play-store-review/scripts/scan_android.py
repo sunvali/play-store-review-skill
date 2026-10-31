@@ -9,7 +9,7 @@ Example:
   python3 -B scripts/scan_android.py . --section permissions sdk --artifact app-release.apk
 
 Exit codes: 0 facts emitted, 2 bad arguments, 3 partial (see "errors").
-Debug, test, androidTest and testFixtures source sets are skipped.
+Debug, test, androidTest and testFixtures source sets (and names ending Debug or Test) are skipped.
 """
 import argparse
 import json
@@ -22,7 +22,7 @@ import sys
 import zipfile
 import xml.etree.ElementTree as ET
 
-TOOL_VERSION = "1.2.0"
+TOOL_VERSION = "1.3.0"
 SECTIONS = ["project_kind", "modules", "sdk", "build", "permissions", "components",
             "dependencies", "native", "listing", "secrets"]
 MAX_TEXT = 2 * 1024 * 1024          # per file
@@ -33,7 +33,12 @@ STDOUT_LIMIT = 20000
 ZIP_MAX_ENTRIES = 20000
 ZIP_MAX_BYTES = 2 * 1024 ** 3       # declared uncompressed total
 SKIP_DIRS = {".git", "node_modules", ".gradle", ".idea", "Pods", ".dart_tool", ".expo", "__pycache__"}
-SKIP_SOURCE_SETS = {"debug", "test", "androidTest", "testFixtures"}
+SKIP_SET = re.compile(r"^(debug|test|androidTest|testFixtures)$|(Debug|Test|TestFixtures)$")
+ANDROID_BLOCK = re.compile(r"\bandroid\s*\{|\bconfigure\s*<[^{}]*?Extension[^{}]*>\s*\{")
+APP_PLUGIN = re.compile(r"android\.application|androidApplication")
+LIB_PLUGIN = re.compile(r"android\.library|androidLibrary")
+WITH_ID = r"\b(?:withId|withPlugin)\s*\([^)]*\)\s*\{"
+OTHER_PLATFORM_PUB = ("_ios", "_macos", "_windows", "_web", "_storekit", "_linux")
 NON_APP_MODULE = re.compile(r"(^|/|-)(demo|demos|sample|samples|example|examples|\w*benchmark\w*|baseline\w*|test\w*|screener)(/|-|$)", re.I)
 BUILD_LOGIC_KT = re.compile(r"(^|/)(buildSrc|build-logic|build-plugin|convention\w*)/.*\.kt$")
 MERGED_DIRS = ("merged_manifests", "merged_manifest", "packaged_manifests")
@@ -96,6 +101,53 @@ def block(text, pattern, start=0):
         if depth == 0:
             return m.start(), text[i + 1:j]
     return m.start(), text[i + 1:]
+
+
+def top_blocks(body):
+    """(name, body) of each `name {` or `create("name") {` directly inside body."""
+    found, depth, start, head = [], 0, 0, None
+    for i, c in enumerate(body):
+        if c == "{":
+            if depth == 0:
+                h = re.search(r"(\w+)[\"']?\)?\s*$", body[start:i])
+                head = (h.group(1), i) if h else None
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                if head:
+                    found.append((head[0], body[head[1] + 1:i]))
+                start = i + 1
+    return found
+
+
+def android_kind(text):
+    """'application', 'library' or None. Ignores `apply false` lines and plugins.withId blocks, which do not make this module Android."""
+    t = re.sub(r"[^\n]*\bapply\s*\(?\s*false\b[^\n]*", "", text)
+    while True:
+        b, m = block(t, WITH_ID), re.search(WITH_ID, t)
+        if not b:
+            break
+        t = t[:m.start()] + t[m.end() + len(b[1]) + 1:]
+    pb = block(t, r"\bplugins\s*\{")   # a plugin id elsewhere (for example a convention plugin registration) applies nothing here
+    plug = (pb[1] if pb else "") + "".join(re.findall(r"[^\n]*\bapply\b[^\n]*plugin[^\n]*", t))
+    app = APP_PLUGIN.search(plug) or re.search(r"\bapplicationId\b", t)
+    if ANDROID_BLOCK.search(t) or app or LIB_PLUGIN.search(plug):
+        return "application" if app else "library"
+    return None
+
+
+def catalogs_for(ctx, rel):
+    """Catalogs of the nearest folder above rel that has gradle/*.versions.toml, else all of them."""
+    def home(c):
+        d = os.path.dirname(c[2])
+        return os.path.dirname(d) if os.path.basename(d) == "gradle" else d
+    d = os.path.dirname(rel)
+    while True:
+        hit = [c for c in ctx["catalogs"] if home(c) == d]
+        if hit or not d:
+            return hit or ctx["catalogs"]
+        d = os.path.dirname(d)
 
 
 def load_ref(ctx, name):
@@ -230,13 +282,13 @@ def find_var(ctx, name, value=r"(\d+)"):
     return None
 
 
-def resolve(ctx, expr, numeric=True):
+def resolve(ctx, expr, numeric=True, rel=""):
     """Resolve a Gradle expression to a literal through version catalogs and ext/properties vars."""
     expr = re.sub(r"\.(toInt|toInteger|toString|get)\(\)", "", expr)
     m = re.search(r"libs\.versions\.([\w.]+)", expr)
     if m:
         key = norm(re.sub(r"(\.(get|toInt|toString|asProvider))+$", "", m.group(1)))
-        for versions, _, _, _ in ctx["catalogs"]:
+        for versions, _, _, _ in catalogs_for(ctx, rel):
             if key in versions:
                 return versions[key]
     names = re.findall(r"[A-Za-z_]\w*", expr)
@@ -253,19 +305,25 @@ def num_setting(ctx, rel, text, names):
         m = re.search(r"\b%s\s*\{[^}]*?\brelease\(([^\n{]*)\)" % name, text)  # AGP 9 compileSdk { version = release(36) }
         if m:
             ln, rest = line_of(text, m.start()), m.group(1).strip()
-            val = rest if rest.isdigit() else resolve(ctx, rest)
+            val = rest if rest.isdigit() else resolve(ctx, rest, rel=rel)
             if val is not None and str(val).isdigit():
                 return fact(rel, ln, "declared" if rest.isdigit() else "resolved", value=int(val))
             return fact(rel, ln, "inferred", expr=rest)
-        m = re.search(r"\b%s\b[ \t]*(?:=[ \t]*)?\(?[ \t]*([^\n;}]+)" % name, text)  # one-line blocks separate with ;
+        m = re.search(r"\b%s\b(?:[ \t]*=\s*|[ \t]*\(?[ \t]*)([^\n;}]+)" % name, text)  # one-line blocks separate with ;
         if not m:
             continue
         rest = m.group(1).strip()
+        for more in text[m.end(1):m.end(1) + 2000].split("\n")[1:]:  # `.get()` lines continue the expression
+            if not more.strip().startswith((".", "?:")):
+                break
+            rest += more.strip()
+        if rest.startswith(":"):  # a typed parameter such as `targetSdk: Int`
+            continue
         ln = line_of(text, m.start())
         lit = re.match(r"(?:release\()?(\d+)\)?\s*(?://.*)?$", rest)
         if lit:
             return fact(rel, ln, "declared", value=int(lit.group(1)))
-        val = resolve(ctx, rest)
+        val = resolve(ctx, rest, rel=rel)
         if val is not None and str(val).isdigit():
             return fact(rel, ln, "resolved", value=int(val), expr=rest)
         return fact(rel, ln, "inferred", expr=rest)
@@ -291,20 +349,29 @@ def first_version(ctx, patterns, catalog_keys=()):
 def do_gradle(ctx, out):
     modules, sdk = [], {k: [] for k in ("targetSdk", "compileSdk", "minSdk", "agp", "gradleWrapper", "kotlin", "ndk")}
     build = {"gradle": [], "manifest": []}
+    shared = []   # build files that set Android values for other modules, such as a root script using plugins.withId
     for rel in sorted(ctx["gradle"]):
         text = ctx["gradle"][rel]
-        if not re.search(r"(^|/)build\.gradle(\.kts)?$", rel) or not re.search(r"\bandroid\s*\{", text):
+        if not re.search(r"(^|/)build\.gradle(\.kts)?$", rel):
             continue
-        app = re.search(r"com\.android\.application|android\.application|androidApplication|\bapplicationId\b", text)
-        mod = {"path": os.path.dirname(rel) or ".", "type": "application" if app else "library"}
+        kind = android_kind(text)
+        if not kind:
+            if ANDROID_BLOCK.search(text):
+                shared.append(rel)
+            continue
+        mod = {"path": os.path.dirname(rel) or ".", "type": kind}
         for key, pat in (("applicationId", r"\bapplicationId\b\s*=?\s*[\"']([^\"']+)"), ("namespace", r"\bnamespace\b\s*=?\s*[\"']([^\"']+)"),
                          ("versionCode", r"\bversionCode\b\s*=?\s*(\d+)"), ("versionName", r"\bversionName\b\s*=?\s*[\"']([^\"']+)")):
             m = re.search(pat, text)
             if m:
                 mod[key] = int(m.group(1)) if key == "versionCode" else m.group(1)
+        ident = re.search(r"\bapplicationId\b\s*=\s*([\w.]+)", text)  # applicationId = APP_PACKAGE from gradle.properties
+        if "applicationId" not in mod and ident:
+            hit = find_var(ctx, ident.group(1).split(".")[-1], r"([^\s\"']+)")
+            if hit:
+                mod["applicationId"] = hit[0]
         pf = block(text, r"\bproductFlavors\s*\{")
-        # shortcut: nested blocks inside productFlavors (ndk, etc.) are listed too
-        mod["flavors"] = sorted(set(re.findall(r"^\s*(?:create\(|register\(|maybeCreate\()?[\"']?(\w+)[\"']?\)?\s*\{", pf[1], re.M))) if pf else []
+        mod["flavors"] = sorted({n for n, _ in top_blocks(pf[1])}) if pf else []
         modules.append(dict(sorted(mod.items())))
         for key, names in (("targetSdk", ("targetSdk", "targetSdkVersion")), ("minSdk", ("minSdk", "minSdkVersion")),
                            ("compileSdk", ("compileSdk", "compileSdkVersion"))):
@@ -330,7 +397,7 @@ def do_gradle(ctx, out):
         if m:
             build["gradle"].append(fact(rel, line_of(text, m.start()), "declared", useLegacyPackaging=m.group(1) == "true"))
     for rel in sorted(ctx["gradle"]):  # common.gradle and convention plugins hold values for many modules
-        if re.search(r"\.gradle(\.kts)?$", rel) and not re.search(r"(^|/)(build|settings)\.gradle(\.kts)?$", rel):
+        if rel in shared or BUILD_LOGIC_KT.search(rel) or (re.search(r"\.gradle(\.kts)?$", rel) and not re.search(r"(^|/)(build|settings)\.gradle(\.kts)?$", rel)):
             for key, names in (("targetSdk", ("targetSdk", "targetSdkVersion")), ("minSdk", ("minSdk", "minSdkVersion")),
                                ("compileSdk", ("compileSdk", "compileSdkVersion"))):
                 f = num_setting(ctx, rel, ctx["gradle"][rel], names)
@@ -372,7 +439,7 @@ def app_sdk(ctx, out):
 
     def rank(f):
         path = os.path.dirname(f["file"]) or "."
-        if f.get("source") == "expo-build-properties":
+        if f.get("source"):
             return 0
         if path not in paths:
             return 1
@@ -382,12 +449,31 @@ def app_sdk(ctx, out):
             return 2
         return 0 if paths[path] == "application" else 3
 
-    picks = {}
+    picks, demo = {}, []
     for key in ("targetSdk", "compileSdk", "minSdk"):
         facts = sorted(out["sdk"].get(key, []), key=lambda f: (rank(f), f["file"]))
-        if facts:
+        if facts and rank(facts[0]) == 4:
+            demo.append(key)
+        elif facts:
             picks[key] = dict(facts[0], scope=("app", "shared build script", "other form factor", "library", "demo or test")[rank(facts[0])])
+    apps = []
+    for m in out["modules"]:
+        if m["type"] != "application" or NON_APP_MODULE.search(m["path"]):
+            continue
+        entry = {"module": m["path"], "applicationId": m.get("applicationId")}
+        for key in ("targetSdk", "compileSdk", "minSdk"):
+            mine = [f for f in out["sdk"].get(key, []) if (os.path.dirname(f["file"]) or ".") == m["path"]]
+            if not mine:  # fall back to a shared script, as the one app pick does
+                mine = sorted((f for f in out["sdk"].get(key, []) if (os.path.dirname(f["file"]) or ".") not in paths), key=lambda f: (rank(f), f["file"]))
+            if mine:
+                entry[key] = mine[0].get("value", mine[0].get("expr"))
+        apps.append({k: v for k, v in entry.items() if v is not None})
+    out["sdk"]["apps"] = apps
     out["sdk"]["app"] = dict(sorted(picks.items()))
+    if len(apps) > 1:
+        out["sdk"]["app"]["ambiguous"] = True
+    if demo:
+        ctx["unknown"].append("Only demo, sample, benchmark or test module values were found for %s, so none was reported for the app: read them from the main app module or a release build." % ", ".join(demo))
     if "value" not in picks.get("targetSdk", {}):
         ctx["unknown"].append("The main app's targetSdk could not be read as a number: confirm it in Play Console's App bundle explorer or a release build before judging the target API requirement.")
 
@@ -411,7 +497,7 @@ def perm_fact(ctx, name, source, rel, line, conf, **kw):
     return fact(rel, line, conf, permission=name, source=source, **{"class": cls, "alternative": alt}, **kw)
 
 
-def do_manifest(ctx, out, rel, source, data=None):
+def do_manifest(ctx, out, rel, source, data=None, place=None):
     data = data if data is not None else read_bytes(ctx, rel)
     if data is None:
         return
@@ -423,7 +509,7 @@ def do_manifest(ctx, out, rel, source, data=None):
     text = data.decode("utf-8", "replace")
     conf = "resolved" if source != "manifest" else "declared"
     where = re.match(r"(?:(.+)/)?src/([^/]+)/", rel)
-    place = {"module": where.group(1) or ".", "source_set": where.group(2)} if where else {}
+    place = place or ({"module": where.group(1) or ".", "source_set": where.group(2)} if where else {})
     for el in root.iter():
         name = el.get(ANDROID + "name")
         if el.tag in PERM_TAGS and name:
@@ -448,14 +534,27 @@ def do_manifest(ctx, out, rel, source, data=None):
 
 
 def do_manifests(ctx, out, files, merged):
+    present, explicit = set(files), {}   # explicit: manifest.srcFile targets -> (module, source set)
+    for rel, text in sorted(ctx["gradle"].items()):
+        sets = block(text, r"\bsourceSets\s*\{") if re.search(r"(^|/)build\.gradle(\.kts)?$", rel) else None
+        for name, body in top_blocks(sets[1]) if sets else []:
+            for m in re.finditer(r"\bmanifest(?:\.|\s*\{\s*)srcFile\s*[(=]?\s*(?:file\()?\s*[\"']([^\"']+)[\"']", body):
+                target = os.path.normpath(os.path.join(os.path.dirname(rel), m.group(1))).replace(os.sep, "/")
+                if target in present and not SKIP_SET.search(name):
+                    explicit[target] = {"module": os.path.dirname(rel) or ".", "source_set": name}
     for rel in files:
         parts = rel.split("/")
-        if parts[-1] != "AndroidManifest.xml":
+        if not re.fullmatch(r"AndroidManifest.*\.xml", parts[-1]):
             continue
-        i = parts.index("src") if "src" in parts else -1
-        if i >= 0 and len(parts) > i + 1 and parts[i + 1] in SKIP_SOURCE_SETS:
+        if any(SKIP_SET.search(parts[j + 1]) for j, x in enumerate(parts[:-2]) if x in ("src", "config")):
             continue
-        do_manifest(ctx, out, rel, "manifest")
+        place = explicit.get(rel)
+        if "config" in parts[:-1]:  # AndroidManifest*.xml variants live in module config folders
+            j = parts.index("config")
+            place = place or {"module": "/".join(parts[:j]) or ".", "source_set": parts[j + 1] if j + 2 < len(parts) else "config"}
+        elif parts[-1] != "AndroidManifest.xml" and not place:
+            continue
+        do_manifest(ctx, out, rel, "manifest", place=place)
     for rel in merged:
         do_manifest(ctx, out, rel, "merged")
     removed = {}
@@ -471,39 +570,52 @@ def do_manifests(ctx, out, files, merged):
 # ---------- dependencies ----------
 
 def categorize(sigs, name):
+    """Category of the longest matching prefix."""
+    best = (0, None)
     for cat, prefixes in sigs.get("categories", {}).items():
-        if any(name.startswith(p) for p in prefixes):
-            return cat
-    return None
+        best = max([best] + [(len(p), cat) for p in prefixes if name.startswith(p)], key=lambda b: b[0])
+    return best[1]
+
+
+def app_roots(ctx, files):
+    """Folders whose package.json belongs to the app: the scan root, any folder with an android/ Gradle project, and Expo or Capacitor config folders."""
+    roots = {""} | {os.path.dirname(f) for f in files if re.fullmatch(r"(app\.json|app\.config\.\w+|eas\.json|capacitor\.config\.\w+)", f.rsplit("/", 1)[-1])}
+    for rel in ctx["gradle"]:
+        parts = rel.split("/")
+        if "android" in parts[:-1] and re.search(r"(build|settings)\.gradle(\.kts)?$", rel):
+            roots.add("/".join(parts[:parts.index("android")]))
+    return roots
 
 
 def do_dependencies(ctx, out, files):
-    seen = {}   # (ecosystem, name) -> (version, file, line, confidence)
+    seen = {}   # (ecosystem, name, file, configuration) -> (version, line, confidence)
     counts = {"gradle": 0, "npm": 0, "pub": 0}
 
-    def put(eco, name, ver, rel, line, conf):
-        counts[eco] += 1
-        key = (eco, name, rel)
+    def put(eco, name, ver, rel, line, conf, cfg=None):
+        counts[eco] = counts.get(eco, 0) + 1
+        key = (eco, name, rel, cfg)
         if key not in seen or conf == "resolved":
             seen[key] = (ver, line, conf)
 
-    def catalog_put(accessor, rel, n):
+    def catalog_put(accessor, rel, n, cfg):
         if accessor.startswith(("versions", "plugins")):
             return
         name = re.sub(r"\.(get|asProvider)$", "", accessor)
-        for _, libs, _, _ in ctx["catalogs"]:
+        for _, libs, _, _ in catalogs_for(ctx, rel):
             keys = libs.get("bundle:" + norm(name[8:]), []) if name.startswith("bundles.") else [norm(name)]
             for key in keys:
                 if key in libs:
-                    put("gradle", libs[key][0], libs[key][1], rel, n, "resolved")
+                    put("gradle", libs[key][0], libs[key][1], rel, n, "resolved", cfg)
 
-    conf_re = re.compile(r"^\s*(\w+)\s*\(?\s*(.*)$")
+    for eco, name, ver, rel, line, conf in ctx["extra_deps"]:   # Expo plugins, Cordova plugins and similar config entries
+        put(eco, name, ver, rel, line, conf)
+    conf_re = re.compile(r"^\s*[\"']?(\w+)[\"']?\s*\(?\s*(.*)$")
     for rel in sorted(ctx["gradle"]):
         text = ctx["gradle"][rel]
         if rel.endswith("lockfile"):
             for n, line in enumerate(text.splitlines(), 1):
-                m = re.match(r"([\w.\-]+:[\w.\-]+):([^=\s]+)=", line)
-                if m:
+                m = re.match(r"([\w.\-]+:[\w.\-]+):([^=\s]+)=(.*)", line)
+                if m and m.group(3).strip() != "classpath":   # buildscript-only rows
                     put("gradle", m.group(1), m.group(2), rel, n, "resolved")
             continue
         if not re.search(r"\.gradle(\.kts)?$", rel):
@@ -513,7 +625,7 @@ def do_dependencies(ctx, out, files):
         for n, line in statements:
             added = re.match(r"\s*add\(\s*([^,]+),\s*libs\.([\w.]+)", line)
             if added and "test" not in added.group(1).lower():
-                catalog_put(added.group(2), rel, n)
+                catalog_put(added.group(2), rel, n, added.group(1).strip("\"' "))
             m = conf_re.match(line)
             if not m or not re.fullmatch(r"(?:\w+)?(?:[Ii]mplementation|[Aa]pi|[Cc]ompileOnly|[Rr]untimeOnly)|classpath|kapt|ksp", m.group(1)) \
                     or m.group(1).startswith(("test", "androidTest")):
@@ -524,13 +636,14 @@ def do_dependencies(ctx, out, files):
                 ver, conf = lit.group(2), "declared"
                 var = re.fullmatch(r"\$\{?(\w+)\}?", ver or "")
                 if var:
-                    ver = resolve(ctx, var.group(1), numeric=False)
+                    ver = resolve(ctx, var.group(1), numeric=False, rel=rel)
                     conf = "resolved" if ver else "inferred"
-                put("gradle", lit.group(1), ver, rel, n, conf)
+                put("gradle", lit.group(1), ver, rel, n, conf, m.group(1))
                 continue
             acc = re.search(r"\blibs\.([\w.]+)", rest)
             if acc:
-                catalog_put(acc.group(1), rel, n)
+                catalog_put(acc.group(1), rel, n, m.group(1))
+    roots, outside = app_roots(ctx, files), []
     for rel in files:
         base = rel.rsplit("/", 1)[-1]
         if base == "pubspec.yaml":
@@ -547,6 +660,9 @@ def do_dependencies(ctx, out, files):
             for m in re.finditer(r"^  ([\w\-]+):\n(?:    .*\n)*?    version: \"([^\"]+)\"", text, re.M):
                 put("pub", m.group(1), m.group(2), rel, line_of(text, m.start()), "resolved")
         elif base == "package.json" and "node_modules" not in rel:
+            if os.path.dirname(rel) not in roots:
+                outside.append(rel)
+                continue
             text = read_text(ctx, rel)
             try:
                 pkg = json.loads(text or "{}")
@@ -556,7 +672,7 @@ def do_dependencies(ctx, out, files):
             for sec in ("dependencies", "optionalDependencies"):
                 for name, ver in sorted((pkg.get(sec) or {}).items()):
                     put("npm", name, ver if isinstance(ver, str) else None, rel, line_of(text, '"%s"' % name), "declared")
-        elif base == "package-lock.json":
+        elif base == "package-lock.json" and os.path.dirname(rel) in roots:
             try:
                 lock = json.loads(read_text(ctx, rel) or "{}")
             except ValueError as e:
@@ -565,13 +681,20 @@ def do_dependencies(ctx, out, files):
             for path, info in sorted((lock.get("packages") or {}).items()):
                 if path.startswith("node_modules/") and isinstance(info, dict):
                     put("npm", path[len("node_modules/"):].split("node_modules/")[-1], info.get("version"), rel, None, "resolved")
-    items = []
-    for (eco, name, rel), (ver, line, conf) in seen.items():
+    if outside:
+        ctx["unknown"].append("%d package.json file(s) outside the Android app's project root (no android/ folder beside them), for example %s, were not counted: scan that folder on its own if it is part of the app." % (len(outside), ", ".join(outside[:3])))
+    items, may_add = list(ctx["extra_items"]), []
+    off = {p["permission"] for p in out["permissions"] if p.get("removed") or p.get("blocked")}
+    for (eco, name, rel, cfg), (ver, line, conf) in seen.items():
         cat = categorize(ctx["sigs"], name)
-        if cat:
-            items.append(fact(rel, line, conf, category=cat, ecosystem=eco, name=name, version=ver))
-    out["dependencies"] = {"counts": counts, "items": ordered(items),
-                           "note": "items lists only dependencies matching references/sdk-signatures.json"}
+        if cat and not (eco == "pub" and name.endswith(OTHER_PLATFORM_PUB)):
+            items.append(fact(rel, line, conf, category=cat, ecosystem=eco, name=name, version=ver, configuration=cfg))
+        for e in ctx["sigs"].get("mayAddPermissions", []):
+            adds = [a for a in e["adds"] if a not in off]   # the app already removes or blocks these
+            if name.startswith(e["match"]) and adds:
+                may_add.append(fact(rel, line, "inferred", dependency=name, configuration=cfg, mayAdd=adds, basis=e["basis"], url=e["url"]))
+    out["dependencies"] = {"counts": counts, "items": ordered(items), "mayAddPermissions": ordered(may_add),
+                           "note": "items lists only dependencies matching references/sdk-signatures.json; mayAddPermissions lists what a dependency is documented or reported to merge into the manifest: check the merged manifest"}
     if not any(r.endswith("lockfile") or r == "pubspec.lock" or r == "package-lock.json" for r in files):
         ctx["unknown"].append("Transitive dependencies are not visible without a lockfile: generate one (./gradlew dependencies --write-locks, flutter pub get, npm install) or pass a built --artifact.")
 
@@ -586,7 +709,7 @@ def do_kind(ctx, out, files):
             kinds.append(kind)
         markers.append(rel)
 
-    pkg_deps, app_json = {}, None
+    pkg_deps, app_json, cordova_cfg = {}, None, None
     for rel in files:
         base, depth = rel.rsplit("/", 1)[-1], rel.count("/")
         if base == "package.json" and depth <= 1:
@@ -612,8 +735,11 @@ def do_kind(ctx, out, files):
         elif base in ("build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"):
             if re.search(r"multiplatform", ctx["gradle"].get(rel, "")):
                 mark("kmp", rel)
-            if base.startswith("build") and re.search(r"\bandroid\s*\{", ctx["gradle"].get(rel, "")):
+            if base.startswith("build") and android_kind(ctx["gradle"].get(rel, "")):
                 mark("native-gradle", rel)
+        elif base == "config.xml" and depth <= 1 and b"<widget" in (read_bytes(ctx, rel) or b""):
+            cordova_cfg = rel
+            mark("cordova", rel)
     expo_cfg = None
     if app_json:
         try:
@@ -631,6 +757,10 @@ def do_kind(ctx, out, files):
     out["project_kind"] = {"primary": kinds[0] if kinds else "unknown", "all": kinds, "markers": sorted(set(markers))[:20], "markerCount": len(set(markers))}
     if not kinds:
         ctx["unknown"].append("No Android project markers (Gradle android block, pubspec.yaml, package.json, app.json) were found under PROJECT_DIR: point the scan at the project root.")
+    if cordova_cfg:
+        do_cordova(ctx, out, cordova_cfg)
+    if "unity" in kinds:
+        do_unity(ctx, out, files)
     has_android_dir = any(f.startswith("android/") or "/android/" in f for f in files)
     if "flutter" in kinds:
         do_flutter(ctx, out, files)
@@ -641,6 +771,59 @@ def do_kind(ctx, out, files):
         if not out["sdk"]["targetSdk"]:
             ctx["unknown"].append("Expo sets the default target API from its SDK version and no override was found: confirm the targetSdk of a release build against the current requirement.")
     return kinds
+
+
+def do_cordova(ctx, out, rel):
+    data = read_bytes(ctx, rel) or b""
+    if b"xmlns:android" not in data:  # some configs use android: attributes without declaring the prefix
+        data = data.replace(b"<widget", b'<widget xmlns:android="http://schemas.android.com/apk/res/android"', 1)
+    try:
+        root = parse_xml(data)
+    except Exception as e:  # ParseError, ValueError
+        ctx["errors"].append("%s: not parsed (%s)" % (rel, e))
+        return
+    text = data.decode("utf-8", "replace")
+    tag = lambda el: el.tag.rsplit("}", 1)[-1]
+    for el in root.iter():
+        name = el.get("name")
+        if tag(el) == "preference" and name in ("android-targetSdkVersion", "android-minSdkVersion") and (el.get("value") or "").isdigit():
+            key = "targetSdk" if "target" in name else "minSdk"
+            out["sdk"][key].append(fact(rel, line_of(text, name), "declared", value=int(el.get("value")), source="cordova-config"))
+        elif tag(el) == "plugin" and name:
+            ctx["extra_deps"].append(("cordova", name, el.get("spec"), rel, line_of(text, name), "declared"))
+        elif tag(el) == "config-file":
+            for up in el.iter():
+                perm = up.get(ANDROID + "name")
+                if tag(up) in PERM_TAGS and perm:
+                    out["permissions"].append(perm_fact(ctx, perm, "cordova-config", rel, line_of(text, perm), "declared"))
+    ctx["unknown"].append("Cordova plugins add permissions and SDK values at build time that config.xml does not show: inspect the merged manifest of the release build or pass --artifact.")
+
+
+def do_unity(ctx, out, files):
+    for rel in files:
+        base = rel.rsplit("/", 1)[-1]
+        if base == "ProjectSettings.asset" and "ProjectSettings/" in rel:
+            text = read_text(ctx, rel) or ""
+            for key, src in (("targetSdk", "AndroidTargetSdkVersion"), ("minSdk", "AndroidMinSdkVersion")):
+                m = re.search(r"\b%s:\s*(\d+)" % src, text)
+                if m and int(m.group(1)) == 0:   # 0 lets the editor choose
+                    out["sdk"][key].append(fact(rel, line_of(text, m.start()), "declared", automatic=True, expr="automatic (0)", source="unity-project-settings"))
+                elif m:
+                    out["sdk"][key].append(fact(rel, line_of(text, m.start()), "declared", value=int(m.group(1)), source="unity-project-settings"))
+        elif rel.endswith("Packages/manifest.json"):
+            text = read_text(ctx, rel) or ""
+            try:
+                deps = json.loads(text or "{}").get("dependencies") or {}
+            except ValueError as e:
+                ctx["errors"].append("%s: invalid JSON (%s)" % (rel, e))
+                continue
+            known = ctx["sigs"].get("unityPackages", {})
+            for name, ver in sorted(deps.items()):
+                hits = [k for k in known if name.startswith(k)]
+                if hits:
+                    ctx["extra_items"].append(fact(rel, line_of(text, '"%s"' % name), "declared", category=known[max(hits, key=len)],
+                                                   ecosystem="unity", name=name, version=ver if isinstance(ver, str) else None))
+    ctx["unknown"].append("Unity SDK values set to automatic, and package permissions, are decided at build time: inspect a built artifact or the merged manifest.")
 
 
 def do_flutter(ctx, out, files):
@@ -673,6 +856,12 @@ def do_expo(ctx, out, files, app_json, cfg, has_android_dir):
                     if isinstance(v, int):
                         out["sdk"][key].append(fact(app_json, line_of(text, src), "declared", value=v, source="expo-build-properties"))
         info["plugins"] = sorted(set(plugins))
+        for name in info["plugins"]:   # plugin names go through the same signature match as dependencies
+            ctx["extra_deps"].append(("expo-config", name, None, app_json, line_of(text, '"%s"' % name), "declared"))
+        ads_id = (android.get("config") or {}).get("googleMobileAdsAppId")
+        if isinstance(ads_id, str):
+            ctx["extra_items"].append(fact(app_json, line_of(text, "googleMobileAdsAppId"), "declared", category="ads", ecosystem="expo-config",
+                                           name="android.config.googleMobileAdsAppId", masked=ads_id[:4] + "..."))
         for key, flag in (("permissions", {}), ("blockedPermissions", {"blocked": True})):
             for perm in android.get(key) or []:
                 if isinstance(perm, str):
@@ -695,6 +884,10 @@ def do_expo(ctx, out, files, app_json, cfg, has_android_dir):
                     for perm in re.findall(r"[\"']([\w.]+)[\"']", m.group(1)):
                         name = perm if "." in perm else "android.permission." + perm
                         out["permissions"].append(perm_fact(ctx, name, "expo-config", rel, line_of(text, m.start()), "inferred", **flag))
+            m = re.search(r"googleMobileAdsAppId\s*:\s*[\"']([^\"']+)", text)
+            if m:
+                ctx["extra_items"].append(fact(rel, line_of(text, m.start()), "inferred", category="ads", ecosystem="expo-config",
+                                               name="android.config.googleMobileAdsAppId", masked=m.group(1)[:4] + "..."))
             ctx["unknown"].append("%s is JavaScript and was matched as text only (low confidence): have the owner print the evaluated config (npx expo config --type public) and re-check permissions and plugins." % rel)
     out["project_kind"]["expo"] = info
     ctx["unknown"].append("Expo library permissions (for example expo-video, expo-audio, expo-contacts, expo-location, media libraries) are added at build time and are invisible in app.json: inspect the merged manifest of the release build or pass --artifact.")
@@ -867,7 +1060,7 @@ def do_secrets(ctx, out, files):
 
 def scan(root, artifact):
     ctx = {"root": root, "real": os.path.realpath(root), "unknown": [], "errors": [], "budget": READ_BUDGET,
-           "artifact": artifact, "gradle": {}, "catalogs": []}
+           "artifact": artifact, "gradle": {}, "catalogs": [], "extra_deps": [], "extra_items": []}
     ctx["perms"] = load_ref(ctx, "permissions.json").get("permissions", {})
     ctx["sigs"] = load_ref(ctx, "sdk-signatures.json")
     files, merged = walk(ctx)
@@ -913,7 +1106,7 @@ def scan(root, artifact):
 def summary(out):
     flagged = sorted({"%s (%s)" % (p["permission"], p["class"]) for p in out["permissions"] if p.get("class") and not p.get("removed") and not p.get("blocked")})
     return {"schema_version": 1, "tool_version": TOOL_VERSION, "truncated": True,
-            "hint": "Full JSON is over %d bytes: re-run with --output FILE and read it in parts, or use --section." % STDOUT_LIMIT,
+            "hint": "Full JSON is over %d bytes: re-run with --output FILE (stdout then shows one summary line) and read the file in parts, or use --section." % STDOUT_LIMIT,
             "project_kind": out["project_kind"]["primary"] if out["project_kind"] else None,
             "counts": {k: len(out[k]) for k in ("modules", "permissions", "components", "secrets", "unknown", "errors")},
             "classified_permissions": flagged[:40], "unknown": out["unknown"][:20], "errors": out["errors"][:20]}
@@ -944,7 +1137,11 @@ def main(argv=None):
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(text)
-    sys.stdout.write(text if len(text) <= STDOUT_LIMIT else dump(summary(out)))
+        sys.stdout.write("wrote %s (%d bytes): %s, %d permissions, %d unknown, %d errors\n" % (
+            args.output, len(text.encode("utf-8")), out["project_kind"]["primary"] if out["project_kind"] else "no project kind",
+            len(out["permissions"]), len(out["unknown"]), len(out["errors"])))
+    else:
+        sys.stdout.write(text if len(text) <= STDOUT_LIMIT else dump(summary(out)))
     return 3 if out["errors"] else 0
 
 

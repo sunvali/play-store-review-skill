@@ -5,7 +5,7 @@ license: MIT. See LICENSE.txt
 compatibility: Uses python3 for the bundled scripts when available and works without it. Browsing is optional but improves accuracy.
 metadata:
   author: sunvali
-  version: "2.1.0"
+  version: "2.2.0"
   last-updated: "2026-10-31"
 ---
 
@@ -39,13 +39,13 @@ Copy this checklist and work through it:
 
 **1. Check the date and live pages.** Read the top of [references/deadlines.md](references/deadlines.md) and compare `verified_on` with today. If you can browse, read the live Policy Deadlines and target API pages linked there, and let them override this skill. If you cannot browse, say so under "Could not verify".
 
-**2. Run the scanner.** Run it, do not read it. It is read-only, stays offline, and writes nothing into the project:
+**2. Run the scanner.** Run it by its path inside this skill's folder, from any directory. Do not read its source. It is read-only, stays offline, and writes nothing into the project:
 
 ```bash
-python3 -B scripts/scan_android.py PROJECT_DIR --output /tmp/play-facts.json
+python3 -B SKILL_FOLDER/scripts/scan_android.py PROJECT_DIR --output TEMP_FILE
 ```
 
-Paths are relative to this skill's folder. Read `sdk.app` for the installed app's values: its `scope` says where each came from, and other entries may belong to libraries, demos, or other form factors. Add `--artifact app-release.apk` or `.aab` if a release build exists, since only a built artifact shows the real merged manifest and native libraries. Everything in the scanner's `unknown` list goes into "Could not verify" unless you resolve it another way.
+`SKILL_FOLDER` is the folder holding this file, and `TEMP_FILE` is any path outside the project. Read `sdk.app` for the installed app's values: its `scope` says where each came from, and other entries may belong to libraries, demos, or other form factors. When `sdk.app` says `ambiguous`, use `sdk.apps` and ask which app is shipping. `mayAddPermissions` lists permissions that dependencies are known to merge, which source manifests never show. Add `--artifact app-release.apk` or `.aab` if a release build exists, since only a built artifact shows the real merged manifest and native libraries. Everything in the scanner's `unknown` list goes into "Could not verify" unless you resolve it another way.
 
 If Python is unavailable, gather the same facts by hand: `targetSdk` and SDK versions, all manifests, dependencies, `.so` files, and Expo or Flutter config.
 
@@ -75,20 +75,24 @@ If the user is away, continue and list the gaps rather than stopping.
 
 **5. Trace each candidate.** Follow it from entry point to effect and cite `file:line`. A permission matters because of what it does, a disclosure screen because of whether it runs first, and a paywall because of what it sells and where.
 
+Compare every Console answer or draft with the code, one answer at a time. "All functionality is available" fails if the app has sign-in or a paywall, and "no data shared" fails if data leaves for a third party. These mismatches are easy to skip because neither side looks wrong alone.
+
+When a rule concerns something users can reach, find every instance, not the first. Search the whole tree, including bundled HTML and assets, because a resubmission fails on the link you missed.
+
 **6. Try to disprove every CRITICAL and HIGH finding.** Reread the rule's scope and exemptions, then look for what would make the finding wrong. If the trace has a gap, downgrade it to `Verify`.
 
 **7. Write the report and validate it.** Follow [references/report-template.md](references/report-template.md), then run:
 
 ```bash
-python3 -B scripts/validate_report.py REPORT.md
+python3 -B SKILL_FOLDER/scripts/validate_report.py REPORT.md
 ```
 
-Fix what it reports and rerun until it passes. If Python is unavailable, check the report against the template by hand.
+It prints `OK` when the report passes. Fix what it reports and rerun until it does. If Python is unavailable, check the report against the template by hand.
 
 ## Diagnose a notice
 
 1. Extract the issue name, policy, affected version, deadline, and any screenshot from the notice. Ask the user to paste it if you only have a summary.
-2. Match it in the playbook, and note the evidence level of the match.
+2. Match it in the playbook, and note the evidence level of the match. If the notice is missing or vague, do not settle on one cause. Rank two or three candidates with what would confirm each, and always include a mismatch between the merged manifest and a Console declaration such as Advertising ID.
 3. If a project is available, run the scanner as in "Full review", step 2. Its `sdk` and `permissions` facts answer most notices, and they show the next blocker.
 4. Reproduce the cause in the project before proposing a fix. A permission notice means checking the merged manifest of the release build, because libraries add permissions the source manifest never mentions.
 5. Check every active track, including internal, closed, open, and staged releases. An older build still live on one of them can keep a violation open after the fix ships.
@@ -96,6 +100,8 @@ Fix what it reports and rerun until it passes. If Python is unavailable, check t
 7. Answer with the cause, the fix, what to change in the Console, and whether to resubmit or appeal. The report template is optional here. Say plainly when the cause is a guess. Google's notices are often thin, and treating a theory as fact sends people in circles.
 
 ## Evidence standard
+
+State a fact only if it comes from the project, these references, or a live Google page. A framework default, how Google's systems work inside, or a wait time recalled from memory is `Verify`, worded as something to check. Say how sure you are about any cause you infer.
 
 | Situation | Report as |
 |-----------|-----------|
