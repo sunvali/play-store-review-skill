@@ -1,0 +1,14 @@
+apply plugin: "com.android.application"
+android {
+    namespace "com.example.rndemo"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.example.rndemo"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+    }
+}
+dependencies {
+    implementation("com.facebook.react:react-android")
+    implementation 'com.google.android.gms:play-services-ads:22.6.0'
+}

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: permission-not-visible-in-app
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Sees that the data must match visible features, not the permission sheet.

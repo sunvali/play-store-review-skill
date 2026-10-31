@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: no-false-positives-marketplace
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Clears the common false alarms instead of inventing findings.

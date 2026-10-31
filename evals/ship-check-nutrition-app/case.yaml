@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: ship-check-nutrition-app
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  A go or no-go review that catches the planted release and policy problems with evidence, and separates in-force problems from upcoming ones.

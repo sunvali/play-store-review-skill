@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: expo-photo-permission-notice
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Explains the library-added permission, rejects the reword idea, gives a concrete Expo fix, and finds the sibling risk.

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: production-access-refused
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Separates documented rules from vendor claims and gives a plan.

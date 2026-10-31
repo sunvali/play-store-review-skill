@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: remove-permission-breaks-sdk
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Warns that removal can break the attachment feature and gives a safe plan.

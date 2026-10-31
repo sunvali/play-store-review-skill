@@ -1,10 +1,10 @@
 # Google Play Review Skill
 
-An agent skill that checks Android apps against Google Play policies and release requirements, then reports what would block, reject, or remove the app.
+An agent skill that audits Android apps against the Google Play Developer Program Policy and Play Console release gates, then reports what would block, reject, or remove the app, with file and line evidence and a go or no-go verdict.
 
 **Supports:** Kotlin, Java, Jetpack Compose, Flutter, React Native, and Expo
 
-**Rules verified:** October 31, 2026, against the Developer Program Policy effective October 29, 2026
+**Policy checked:** the Developer Program Policy effective October 29, 2026. See [deadlines.md](skills/play-store-review/references/deadlines.md) for the date of the last check.
 
 ## Installation
 
@@ -12,6 +12,9 @@ An agent skill that checks Android apps against Google Play policies and release
 
 ```bash
 /plugin marketplace add sunvali/play-store-review-skill
+```
+
+```bash
 /plugin install play-store-review@play-store-review
 ```
 
@@ -29,48 +32,75 @@ Then run `/plugins`, choose the Play Store Review marketplace, and install `play
 npx skills add sunvali/play-store-review-skill
 ```
 
+### By hand
+
+Copy `skills/play-store-review/` into your agent's skills folder. It is self-contained.
+
 ## Usage
 
 ```text
-Review this app for Google Play compliance
-Why might Play reject this build?
+Is this app ready for Google Play?
+Google rejected my app, here is the notice. What do I do?
 Check my subscription flow against Play billing rules
 We got a policy warning about permissions. What needs to change?
 ```
 
-The report separates:
+A full review has this shape:
 
-1. **Blocked at the door:** automatic gates such as target API and closed testing
-2. **Will likely be rejected or removed:** evidenced policy findings
-3. **Upcoming deadlines** that apply to this app
-4. **Could not verify:** Console state and anything else code cannot show
-5. **Order of work**
+1. **Verdict:** `Ready`, `Fixable before submission`, or `Not ready`
+2. **Blocked at the door:** automatic gates such as target API and closed testing
+3. **Will likely be rejected or removed:** evidenced findings, labeled `Confirmed` or `Verify`
+4. **Upcoming deadlines** that apply to this app, never rated as violations
+5. **Could not verify:** Console state and anything else code cannot show
+6. **Order of work**
 
-## Coverage
+## What is in it
 
-| Rule file | Covers |
-|-----------|--------|
-| [Restricted content](rules/1-restricted-content.md) | Child safety, age restrictions, finance, gambling, UGC, AI content, health, blockchain, IP |
-| [Privacy and permissions](rules/2-privacy-and-permissions.md) | User data, disclosure, Data safety, privacy policy, account deletion, restricted permissions, foreground services |
-| [Security and deception](rules/3-security-and-deception.md) | Device abuse, dynamic code, deceptive behavior, impersonation, SDKs, malware, AppFunctions |
-| [Monetization and ads](rules/4-monetization-and-ads.md) | Play billing, regional programs, subscriptions, loot boxes, ads |
-| [Listing and functionality](rules/5-listing-and-functionality.md) | Metadata, ratings, content ratings, spam, minimum and broken functionality |
-| [Families](rules/6-families.md) | Target audience, child-directed data and ads |
-| [Console and release](rules/7-console-and-release.md) | Target API, 16 KB, vitals, quality thresholds, closed testing, reviewer access, declarations, account type |
+| Part | Purpose |
+|------|---------|
+| [Restricted content](skills/play-store-review/references/1-restricted-content.md) | Child safety, age restrictions, finance, gambling, UGC, AI content, health, blockchain, IP |
+| [Privacy and permissions](skills/play-store-review/references/2-privacy-and-permissions.md) | User data, disclosure, Data safety, privacy policy, account deletion, restricted permissions, foreground services |
+| [Security and deception](skills/play-store-review/references/3-security-and-deception.md) | Device abuse, dynamic code, deceptive behavior, impersonation, SDKs, malware, AppFunctions |
+| [Monetization and ads](skills/play-store-review/references/4-monetization-and-ads.md) | Play Billing, regional programs, subscriptions, ads |
+| [Listing and functionality](skills/play-store-review/references/5-listing-and-functionality.md) | Metadata, store assets, ratings, spam, minimum and broken functionality |
+| [Families](skills/play-store-review/references/6-families.md) | Target audience, child-directed data, ads, and social features |
+| [Console and release](skills/play-store-review/references/7-console-and-release.md) | Target API, 16 KB, quality thresholds, production access, reviewer access, declarations, enforcement |
+| [Deadlines](skills/play-store-review/references/deadlines.md) | Every dated requirement, in one table |
+| [Rejection playbook](skills/play-store-review/references/rejection-playbook.md) | Notice wording mapped to cause and fix, each with an evidence level |
+| [`scan_android.py`](skills/play-store-review/scripts/scan_android.py) | Read-only scanner that collects project facts without running any project code |
+| [`validate_report.py`](skills/play-store-review/scripts/validate_report.py) | Checks that a finished report has the required parts |
+
+Every rule section links to the Google page it came from. Items that sources could not settle are marked `Verify`, and reports from developers are labeled as field reports, not policy.
 
 ## How it differs from Google's skill
 
-Google's [`play-policy-insights`](https://github.com/android/skills/tree/main/play/play-policy-insights) is an automated scanner for data safety, demo credentials, and restricted permissions. Use it for deep data-flow evidence.
+Google's [`play-policy-insights`](https://github.com/android/skills/tree/main/play/play-policy-insights) traces data flows for data safety, demo credentials, and restricted permissions in depth. Use it for that evidence.
 
-This skill is a lighter, instructions-only review of the wider policy and release process: payments by region, ads, listings, families, UGC, AI content, health, finance, quality thresholds, closed testing, and dated deadlines. The two work well together.
+This skill covers the wider policy and release process, and makes the go or no-go call. It also reads what Google's scanner leaves out, such as merged manifests, native library alignment, billing and ad SDKs, and Flutter and Expo config. The two work well together.
 
 ## Keeping it current
 
-Google changes these rules several times a year, so treat every date here as a snapshot. The skill tells the agent to check Google's live Policy Deadlines page first, and the live page wins.
+Google changes these rules several times a year, so treat every date here as a snapshot. The skill tells the agent to check Google's live pages first, and the live page wins. A weekly CI job flags deadlines that have passed.
 
 This skill is not legal advice and does not guarantee approval.
 
-**This skill collects no telemetry and makes no network calls of its own.** It can ask your agent to read Google's public pages. It only files feedback issues after you approve the exact text.
+**This skill collects no telemetry.** The bundled scripts never use the network and never run your project's code. Your agent may read Google's public pages, and it files feedback issues only after you approve the exact text.
+
+## Development
+
+```bash
+python3 -B -m unittest discover -s tests
+```
+
+```bash
+python3 -B scripts/ci/validate_skill.py
+```
+
+[`evals/`](evals) holds test cases in the format `claude plugin eval` reads. They are real, billed model runs, so they are not part of CI:
+
+```bash
+claude plugin eval . --allow-tools Write,Bash --scaffold
+```
 
 ## Feedback
 
@@ -78,7 +108,7 @@ Found a false positive, a miss, or an outdated rule? [File a feedback issue](htt
 
 ## Credits
 
-Structure and packaging are adapted from [safaiyeh/app-store-review-skill](https://github.com/safaiyeh/app-store-review-skill) (MIT). This project is not affiliated with or endorsed by Google.
+Packaging was first adapted from [safaiyeh/app-store-review-skill](https://github.com/safaiyeh/app-store-review-skill) (MIT). This project is not affiliated with or endorsed by Google.
 
 ## License
 

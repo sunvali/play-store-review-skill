@@ -1,0 +1,295 @@
+{
+  "schema_version": 1,
+  "tool_version": "1.0.0",
+  "project_kind": {
+    "primary": "native-gradle",
+    "all": [
+      "native-gradle"
+    ],
+    "markers": [
+      "app/build.gradle.kts"
+    ]
+  },
+  "modules": [
+    {
+      "applicationId": "com.example.demo",
+      "flavors": [
+        "play"
+      ],
+      "namespace": "com.example.demo",
+      "path": "app",
+      "type": "application",
+      "versionCode": 7,
+      "versionName": "1.2"
+    }
+  ],
+  "sdk": {
+    "targetSdk": [
+      {
+        "file": "app/build.gradle.kts",
+        "line": 13,
+        "confidence": "declared",
+        "value": 35
+      }
+    ],
+    "compileSdk": [
+      {
+        "file": "app/build.gradle.kts",
+        "line": 8,
+        "confidence": "resolved",
+        "expr": "libs.versions.compileSdk.get().toInt()",
+        "value": 35
+      }
+    ],
+    "minSdk": [
+      {
+        "file": "app/build.gradle.kts",
+        "line": 12,
+        "confidence": "declared",
+        "value": 24
+      }
+    ],
+    "agp": [
+      {
+        "file": "gradle/libs.versions.toml",
+        "line": null,
+        "confidence": "resolved",
+        "value": "8.5.1"
+      }
+    ],
+    "gradleWrapper": [
+      {
+        "file": "gradle/wrapper/gradle-wrapper.properties",
+        "line": 1,
+        "confidence": "declared",
+        "value": "8.7"
+      }
+    ],
+    "kotlin": [
+      {
+        "file": "gradle/libs.versions.toml",
+        "line": null,
+        "confidence": "resolved",
+        "value": "2.0.0"
+      }
+    ],
+    "ndk": [
+      {
+        "file": "app/build.gradle.kts",
+        "line": 9,
+        "confidence": "declared",
+        "value": "27.0.12077973"
+      }
+    ]
+  },
+  "build": {
+    "gradle": [
+      {
+        "file": "app/build.gradle.kts",
+        "line": 18,
+        "confidence": "declared",
+        "build_type": "release",
+        "minify": true,
+        "signingConfig": true
+      },
+      {
+        "file": "app/build.gradle.kts",
+        "line": 22,
+        "confidence": "declared",
+        "build_type": "debug",
+        "debuggable": true,
+        "signingConfig": false
+      },
+      {
+        "file": "app/build.gradle.kts",
+        "line": 29,
+        "confidence": "declared",
+        "useLegacyPackaging": false
+      }
+    ],
+    "manifest": [
+      {
+        "file": "app/src/main/AndroidManifest.xml",
+        "line": 9,
+        "confidence": "declared",
+        "attribute": "allowBackup",
+        "source": "manifest",
+        "value": "true"
+      },
+      {
+        "file": "app/src/main/AndroidManifest.xml",
+        "line": 9,
+        "confidence": "declared",
+        "attribute": "usesCleartextTraffic",
+        "source": "manifest",
+        "value": "false"
+      }
+    ]
+  },
+  "permissions": [
+    {
+      "file": "app/src/main/AndroidManifest.xml",
+      "line": 6,
+      "confidence": "declared",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration",
+      "class": "foreground-service",
+      "permission": "android.permission.FOREGROUND_SERVICE_CAMERA",
+      "source": "manifest"
+    },
+    {
+      "file": "app/src/main/AndroidManifest.xml",
+      "line": 3,
+      "confidence": "declared",
+      "permission": "android.permission.INTERNET",
+      "source": "manifest"
+    },
+    {
+      "file": "app/src/main/AndroidManifest.xml",
+      "line": 4,
+      "confidence": "declared",
+      "alternative": "Photo Picker (PickVisualMedia / ACTION_PICK_IMAGES)",
+      "class": "restricted-declaration",
+      "permission": "android.permission.READ_MEDIA_IMAGES",
+      "source": "manifest"
+    },
+    {
+      "file": "app/src/main/AndroidManifest.xml",
+      "line": 5,
+      "confidence": "declared",
+      "alternative": "SMS Retriever or SMS User Consent API",
+      "class": "restricted-declaration",
+      "permission": "android.permission.READ_SMS",
+      "source": "manifest"
+    },
+    {
+      "file": "app/src/main/AndroidManifest.xml",
+      "line": 7,
+      "confidence": "declared",
+      "alternative": "Photo Picker or scoped storage",
+      "class": "must-have-core-use",
+      "maxSdkVersion": "28",
+      "permission": "android.permission.WRITE_EXTERNAL_STORAGE",
+      "source": "manifest"
+    },
+    {
+      "file": "app/src/main/AndroidManifest.xml",
+      "line": 8,
+      "confidence": "declared",
+      "alternative": "Remove with tools:node=\"remove\" if the app has no ads or attribution use",
+      "class": "advertising-id",
+      "permission": "com.google.android.gms.permission.AD_ID",
+      "removed": true,
+      "source": "manifest"
+    }
+  ],
+  "components": [
+    {
+      "file": "app/src/main/AndroidManifest.xml",
+      "line": 10,
+      "confidence": "declared",
+      "exported": "false",
+      "foregroundServiceType": "camera",
+      "kind": "service",
+      "name": ".SyncService",
+      "source": "manifest"
+    },
+    {
+      "file": "app/src/main/AndroidManifest.xml",
+      "line": 11,
+      "confidence": "declared",
+      "actions": [
+        "android.accessibilityservice.AccessibilityService"
+      ],
+      "exported": "true",
+      "kind": "service",
+      "name": ".Reader",
+      "permission": "android.permission.BIND_ACCESSIBILITY_SERVICE",
+      "source": "manifest"
+    }
+  ],
+  "dependencies": {
+    "counts": {
+      "gradle": 4,
+      "npm": 0,
+      "pub": 0
+    },
+    "items": [
+      {
+        "file": "app/build.gradle.kts",
+        "line": 33,
+        "confidence": "resolved",
+        "category": "billing",
+        "ecosystem": "gradle",
+        "name": "com.android.billingclient:billing-ktx",
+        "version": "7.0.0"
+      },
+      {
+        "file": "app/build.gradle.kts",
+        "line": 35,
+        "confidence": "resolved",
+        "category": "ads",
+        "ecosystem": "gradle",
+        "name": "com.google.android.gms:play-services-ads",
+        "version": "23.0.0"
+      },
+      {
+        "file": "app/build.gradle.kts",
+        "line": 34,
+        "confidence": "resolved",
+        "category": "analytics",
+        "ecosystem": "gradle",
+        "name": "com.google.firebase:firebase-analytics",
+        "version": "22.0.0"
+      },
+      {
+        "file": "app/build.gradle.kts",
+        "line": 36,
+        "confidence": "declared",
+        "category": "crash",
+        "ecosystem": "gradle",
+        "name": "io.sentry:sentry-android",
+        "version": "7.10.0"
+      }
+    ],
+    "note": "items lists only dependencies matching references/sdk-signatures.json"
+  },
+  "native": {
+    "libraries": [],
+    "buildFiles": [],
+    "artifact": null
+  },
+  "listing": {
+    "fastlane": {
+      "en-US": {
+        "short_description_chars": 11,
+        "title_chars": 4
+      }
+    },
+    "storeAssetDirs": [],
+    "policyLikeFiles": [
+      {
+        "file": "docs/privacy_policy.md",
+        "line": null,
+        "confidence": "inferred",
+        "match": "privacy"
+      }
+    ],
+    "loginLikeFiles": []
+  },
+  "secrets": [
+    {
+      "file": "app/src/main/AndroidManifest.xml",
+      "line": 14,
+      "confidence": "declared",
+      "key": "com.google.android.geo.API_KEY",
+      "kind": "manifest-meta-data"
+    }
+  ],
+  "unknown": [
+    "Native libraries pulled in by Gradle, pub or npm dependencies, and their 16 KB ELF alignment, are not in the source tree: build the release and pass --artifact app.apk.",
+    "No merged manifest found under build/intermediates, so permissions contributed by libraries and SDKs are not visible: run a release build (for example ./gradlew :app:processReleaseMainManifest) and re-scan, or pass --artifact.",
+    "Play Console state (Data safety form, app content declarations, testing track status, store listing text beyond fastlane files) is not in the repository: check it in Play Console.",
+    "Transitive dependencies are not visible without a lockfile: generate one (./gradlew dependencies --write-locks, flutter pub get, npm install) or pass a built --artifact."
+  ],
+  "errors": []
+}

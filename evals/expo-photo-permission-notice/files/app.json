@@ -1,0 +1,1 @@
+{"expo":{"name":"TrailNotes","slug":"trailnotes","version":"2.3.0","sdkVersion":"52.0.0","android":{"package":"com.example.trailnotes","versionCode":23,"permissions":["ACCESS_COARSE_LOCATION"]},"plugins":["expo-audio","expo-image-picker"]}}

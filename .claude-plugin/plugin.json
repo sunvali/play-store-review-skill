@@ -1,7 +1,7 @@
 {
   "name": "play-store-review",
   "description": "Evaluates Android apps against Google Play policies and release requirements",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": {
     "name": "sunvali"
   },

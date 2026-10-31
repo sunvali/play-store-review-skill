@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<!DOCTYPE manifest [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">]>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="x.&b;">
+    <uses-permission android:name="android.permission.READ_SMS" />
+</manifest>

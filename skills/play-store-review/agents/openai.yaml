@@ -1,0 +1,6 @@
+interface:
+  display_name: "Play Store Review"
+  short_description: "Audit Android apps for Google Play compliance"
+  default_prompt: "Use $play-store-review to review this app for Google Play compliance before submission."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,14 @@
+[versions]
+agp = "8.5.1"
+kotlin = "2.0.0"
+billing = "7.0.0"
+compileSdk = "35"
+
+[libraries]
+billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "billing" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics", version = "22.0.0" }
+play-ads = "com.google.android.gms:play-services-ads:23.0.0"
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

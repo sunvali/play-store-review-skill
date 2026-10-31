@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "demo",
+    "sdkVersion": "52.0.0",
+    "android": {
+      "package": "com.example.expodemo",
+      "versionCode": 4,
+      "permissions": ["CAMERA", "android.permission.READ_MEDIA_IMAGES"],
+      "blockedPermissions": ["android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK", "WRITE_CONTACTS"]
+    },
+    "plugins": [
+      "expo-video",
+      ["expo-build-properties", { "android": { "compileSdkVersion": 35, "targetSdkVersion": 35, "minSdkVersion": 24 } }]
+    ]
+  }
+}

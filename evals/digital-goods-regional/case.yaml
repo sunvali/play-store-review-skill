@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: digital-goods-regional
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Gives a region-by-region answer, covers the chat agent, and avoids a flat yes or no.

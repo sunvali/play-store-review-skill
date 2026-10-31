@@ -3,3 +3,5 @@ node_modules/
 dist/
 build/
 .claude/
+evals/results/
+__pycache__/
