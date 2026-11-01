@@ -143,6 +143,16 @@ python3 -B scripts/ci/validate_skill.py
 claude plugin eval . --allow-tools Write,Bash --scaffold
 ```
 
+## Privacy
+
+This project has no server and collects no data. Neither the skill nor its authors receive your code, your reports, or anything about you.
+
+- **What it reads:** the agent reads your Android project to run the review, and the bundled scanner reads the project's files on your machine. Secrets the scanner finds are reported by file and kind, with at most the first 4 characters of a match.
+- **What it runs:** two local Python scripts, `scan_android.py` and `validate_report.py`. They make no network calls and run no project code. If `aapt2` is installed, the scanner uses it to read a binary manifest in an artifact you pass with `--artifact`.
+- **What it writes:** the scan results and the report, only to paths your agent chooses on your machine. It keeps nothing else.
+- **What it fetches:** if your agent can browse, it reads Google's public policy pages. That sends no project data.
+- **Your agent:** the agent and model you use see what they read from your project, under that provider's own terms. Check those terms before reviewing confidential code.
+
 ## Feedback
 
 Found a false positive, a miss, or an outdated rule? [File a feedback issue](https://github.com/sunvali/play-store-review-skill/issues/new?template=skill-feedback.yml). Please leave out app names and proprietary code.
