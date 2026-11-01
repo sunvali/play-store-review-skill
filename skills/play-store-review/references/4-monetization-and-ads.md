@@ -55,7 +55,7 @@ Allowed: links to administrative pages (account, privacy, help) that do not lead
 - [ ] Purchases are acknowledged, and verified on a server when they unlock value: `Verify` against the Play Billing docs. Not covered by the policy text read
 - [ ] Enrolled in a program wherever a non-Play payment or outbound link exists (see 4.4)
 
-**Evidence:** checkout code and URLs, webview targets, deep links, store-page links, SKU lists, billing client calls, listing text about paid features, and any agent or plugin that completes a purchase.
+**Evidence:** search the whole tree for every route to outside payment, including donation links, because each one counts and a fix that misses one fails again. Check bundled HTML and changelogs, and check that a flavor flag really hides each link on the Play build. Also check checkout code and URLs, webview targets, deep links, store-page links, SKU lists, billing client calls, listing text about paid features, and any agent or plugin that completes a purchase.
 
 **Violations Google lists:**
 

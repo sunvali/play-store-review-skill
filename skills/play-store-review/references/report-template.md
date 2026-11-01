@@ -3,7 +3,7 @@
 Use these headings, in this order. Omit a section only if it has nothing in it, except **Verdict** and **Could not verify**, which are always present. `scripts/validate_report.py` checks this.
 
 - **Verdict:** one line with `Ready`, `Fixable before submission`, or `Not ready`, then today's date and the checked commit, or "no commit" outside git. `Ready` needs an empty "Blocked at the door" and "Will likely be rejected or removed".
-- **Blocked at the door:** gates Google enforces automatically, before a human reviews anything, such as target API, production access for new personal accounts, unfinished mandatory Console tasks, and app registration.
+- **Blocked at the door:** gates Google enforces automatically, before a human reviews anything, such as target API, production access for new personal accounts, unfinished mandatory Console tasks, and app registration. Only `Confirmed` items go here. A gate you cannot confirm goes under "Could not verify".
 - **Will likely be rejected or removed:** policy findings, most severe first.
 - **Upcoming deadlines:** only those that apply to this app, each with its date and what to change. Never rated as violations.
 - **Could not verify:** Console state, runtime behavior, and missing facts, each saying who can answer it. Include the scanner's `unknown` items.
@@ -24,7 +24,7 @@ Fix: the specific change for this codebase
 | `HIGH` | Likely rejection |
 | `MEDIUM` | Review risk |
 
-`Confirmed` means traced in code, or stated in a file you read. `Verify` means it depends on something you could not see. Write one finding per root cause, and list its other locations under Evidence.
+Put the label last on the title line, as shown. `Confirmed` means traced in code, or stated in a file you read. `Verify` means it depends on something you could not see. Write one finding per root cause, and list its other locations under Evidence.
 
 ## Example
 
