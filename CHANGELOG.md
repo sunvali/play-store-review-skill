@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.2.1 - 2026-11-01
+
+### Fixed
+
+- Deadlines rechecked against Google's pages, and rows dated November 2026 marked in force
+- The date check now covers rows with only a month, and can be run by hand
+
+### Added
+
+- The scanner names Godot, .NET MAUI, NativeScript, and Tauri projects, says it cannot read their settings, and points to what to check by hand
+- Capacitor, Cordova, Unity, and Kotlin Multiplatform in the skill description
+
 ## 2.2.0 - 2026-10-31
 
 Tested against real rejected apps, real installs, more project types, and Haiku.

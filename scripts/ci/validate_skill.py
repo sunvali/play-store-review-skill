@@ -105,8 +105,8 @@ def check_deadlines(skill, problems, warnings):
     elif (today - datetime.date.fromisoformat(m.group(1))).days > STALE_DAYS:
         warnings.append("deadlines.md verified_on %s is more than %d days old" % (m.group(1), STALE_DAYS))
     for n, line in enumerate(text.splitlines(), 1):
-        d = re.search(r"\d{4}-\d{2}-\d{2}", line)
-        if d and "upcoming" in line.lower() and datetime.date.fromisoformat(d.group(0)) < today:
+        d = re.search(r"\d{4}-\d{2}(-\d{2})?", line)
+        if d and "upcoming" in line.lower() and datetime.date.fromisoformat(d.group(0) if d.group(1) else d.group(0) + "-01") < today:
             warnings.append("deadlines.md:%d upcoming date %s has passed" % (n, d.group(0)))
 
 

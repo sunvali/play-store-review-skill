@@ -239,6 +239,23 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual({i["name"]: i["category"] for i in data["dependencies"]["items"]},
                          {"com.unity.purchasing": "billing", "com.unity.services.mediation": "ads", "com.unity.ads": "ads", "com.unity.services.analytics": "analytics"})
 
+    def test_unsupported_engines_are_named(self):
+        cases = {
+            "godot": {"game/project.godot": "config_version=5\n"},
+            "maui": {"src/App.csproj": "<Project><PropertyGroup><TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks></PropertyGroup></Project>"},
+            "nativescript": {"nativescript.config.ts": "export default {}\n"},
+            "tauri": {"src-tauri/tauri.conf.json": "{}\n"},
+        }
+        for kind, files in cases.items():
+            data = scan(self.project(files))[1]
+            self.assertEqual(data["project_kind"]["primary"], kind)
+            self.assertEqual(sum("cannot read %s" % kind in u for u in data["unknown"]), 1, data["unknown"])
+            self.assertFalse(any("No Android project markers" in u for u in data["unknown"]))
+
+    def test_plain_dotnet_project_is_not_maui(self):
+        data = scan(self.project({"Lib.csproj": "<Project><PropertyGroup><TargetFramework>net9.0</TargetFramework></PropertyGroup></Project>"}))[1]
+        self.assertEqual(data["project_kind"]["primary"], "unknown")
+
     def test_dependency_configuration_and_false_positives(self):
         d = self.project({
             "app/build.gradle.kts": 'plugins { id("com.android.application") }\nandroid { defaultConfig { applicationId = "com.x" } }\ndependencies {\n'
@@ -290,7 +307,7 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(len(text.strip().splitlines()), 1)
         self.assertIn("wrote", text)
         with open(out) as f:
-            self.assertEqual(json.load(f)["tool_version"], "1.3.0")
+            self.assertEqual(json.load(f)["tool_version"], "1.4.0")
 
     def test_dangling_symlink_is_not_an_error(self):
         d = self.project({"app/build.gradle": "android {\n}\n"})

@@ -1,12 +1,12 @@
 ---
 name: play-store-review
-description: Audits an Android app project against the Google Play Developer Program Policy and Play Console release gates, and reports what would block, reject, or remove it, with file and line evidence and a go or no-go verdict. Use when preparing an Android app (Kotlin, Java, Compose, Flutter, React Native, Expo) to submit or release on Google Play, when a Play rejection, suspension, removal, or policy warning needs diagnosing, or when building or reviewing permissions, Data safety answers, Play Billing, subscriptions, ads, user content, AI features, or kids, health, or finance features, target API, or 16 KB page size work. Applies even if the user only says "ready to ship" or "can I publish this". Not for the Apple App Store or for writing store listing copy.
+description: Audits an Android app project against the Google Play Developer Program Policy and Play Console release gates, and reports what would block, reject, or remove it, with file and line evidence and a go or no-go verdict. Use when preparing an Android app (Kotlin, Java, Compose, Flutter, React Native, Expo, Capacitor, Cordova, Unity, Kotlin Multiplatform) to submit or release on Google Play, when a Play rejection, suspension, removal, or policy warning needs diagnosing, or when building or reviewing permissions, Data safety answers, Play Billing, subscriptions, ads, user content, AI features, or kids, health, or finance features, target API, or 16 KB page size work. Applies even if the user only says "ready to ship" or "can I publish this". Not for the Apple App Store or for writing store listing copy.
 license: MIT. See LICENSE.txt
 compatibility: Uses python3 for the bundled scripts when available and works without it. Browsing is optional but improves accuracy.
 metadata:
   author: sunvali
-  version: "2.2.0"
-  last-updated: "2026-10-31"
+  version: "2.2.1"
+  last-updated: "2026-11-01"
 ---
 
 # Google Play Review

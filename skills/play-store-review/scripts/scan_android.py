@@ -22,9 +22,10 @@ import sys
 import zipfile
 import xml.etree.ElementTree as ET
 
-TOOL_VERSION = "1.3.0"
+TOOL_VERSION = "1.4.0"
 SECTIONS = ["project_kind", "modules", "sdk", "build", "permissions", "components",
             "dependencies", "native", "listing", "secrets"]
+UNSUPPORTED_ENGINES = {"godot": "export_presets.cfg", "maui": "the .csproj file", "nativescript": "App_Resources/Android", "tauri": "src-tauri/gen/android"}
 MAX_TEXT = 2 * 1024 * 1024          # per file
 MAX_FILES = 20000
 READ_BUDGET = 256 * 1024 * 1024     # total bytes read from the project
@@ -732,6 +733,14 @@ def do_kind(ctx, out, files):
             mark("capacitor", rel)
         elif base == "ProjectVersion.txt" and "ProjectSettings" in rel:
             mark("unity", rel)
+        elif base == "project.godot":
+            mark("godot", rel)
+        elif base.endswith(".csproj") and re.search(r"net[\d.]+-android|MonoAndroid|<UseMaui>", read_text(ctx, rel) or ""):
+            mark("maui", rel)
+        elif re.match(r"nativescript\.config\.", base):
+            mark("nativescript", rel)
+        elif base == "tauri.conf.json":
+            mark("tauri", rel)
         elif base in ("build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"):
             if re.search(r"multiplatform", ctx["gradle"].get(rel, "")):
                 mark("kmp", rel)
@@ -752,9 +761,12 @@ def do_kind(ctx, out, files):
         mark("react-native", "package.json")
     if "cordova-android" in pkg_deps:
         mark("cordova", "package.json")
-    order = ["expo", "react-native", "flutter", "capacitor", "cordova", "unity", "kmp", "native-gradle"]
+    order = ["expo", "react-native", "flutter", "capacitor", "cordova", "unity", "godot", "maui", "nativescript", "tauri", "kmp", "native-gradle"]
     kinds = sorted(set(kinds), key=order.index)
     out["project_kind"] = {"primary": kinds[0] if kinds else "unknown", "all": kinds, "markers": sorted(set(markers))[:20], "markerCount": len(set(markers))}
+    for kind in kinds:
+        if kind in UNSUPPORTED_ENGINES:
+            ctx["unknown"].append("This scanner cannot read %s settings: check %s by hand, then inspect the merged manifest of a release build or pass --artifact." % (kind, UNSUPPORTED_ENGINES[kind]))
     if not kinds:
         ctx["unknown"].append("No Android project markers (Gradle android block, pubspec.yaml, package.json, app.json) were found under PROJECT_DIR: point the scan at the project root.")
     if cordova_cfg:
