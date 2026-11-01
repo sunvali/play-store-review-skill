@@ -430,7 +430,7 @@ class ArtifactTests(unittest.TestCase):
 
     def test_binary_manifest_without_aapt2_is_unknown(self):
         apk = self.make_zip("bin.apk", {"AndroidManifest.xml": b"\x03\x00\x08\x00binary"})
-        env = dict(os.environ, PATH="/nonexistent")
+        env = {"PATH": "/nonexistent"}
         p = subprocess.run([sys.executable, "-B", SCAN, self.proj, "--artifact", apk], capture_output=True, text=True, env=env)
         self.assertTrue(any("aapt2" in u for u in json.loads(p.stdout)["unknown"]))
 
