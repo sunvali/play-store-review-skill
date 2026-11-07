@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.3 - 2026-11-07
+
+### Fixed
+
+- The skill runs its scripts only when they are in its folder, and no longer tells the agent not to read the scanner's source
+
 ## 2.2.2 - 2026-11-07
 
 ### Fixed

@@ -5,7 +5,7 @@ license: MIT. See LICENSE.txt
 compatibility: Uses python3 for the bundled scripts when available and works without it. Browsing is optional but improves accuracy.
 metadata:
   author: sunvali
-  version: "2.2.2"
+  version: "2.2.3"
   last-updated: "2026-11-07"
 ---
 
@@ -39,7 +39,7 @@ Copy this checklist and work through it:
 
 **1. Check the date and live pages.** Read the top of [references/deadlines.md](references/deadlines.md) and compare `verified_on` with today. If you can browse, read the live Policy Deadlines and target API pages linked there, and let them override this skill. If you cannot browse, say so under "Could not verify".
 
-**2. Run the scanner.** Run it by its path inside this skill's folder, from any directory. Do not read its source. It is read-only, stays offline, and writes nothing into the project:
+**2. Collect the project facts.** If this skill's folder has `scripts/scan_android.py`, run it by its path from any directory. It is plain, readable Python that is read-only, stays offline, and writes nothing into the project:
 
 ```bash
 python3 -B SKILL_FOLDER/scripts/scan_android.py PROJECT_DIR --output TEMP_FILE
@@ -47,7 +47,7 @@ python3 -B SKILL_FOLDER/scripts/scan_android.py PROJECT_DIR --output TEMP_FILE
 
 `SKILL_FOLDER` is the folder holding this file, and `TEMP_FILE` is any path outside the project. Read `sdk.app` for the installed app's values: its `scope` says where each came from, and other entries may belong to libraries, demos, or other form factors. When `sdk.app` says `ambiguous`, use `sdk.apps` and ask which app is shipping. `mayAddPermissions` lists permissions that dependencies are known to merge, which source manifests never show. Add `--artifact app-release.apk` or `.aab` if a release build exists, since only a built artifact shows the real merged manifest and native libraries. Everything in the scanner's `unknown` list goes into "Could not verify" unless you resolve it another way.
 
-If Python or the `scripts` folder is unavailable, gather the same facts by hand: `targetSdk` and SDK versions, all manifests, dependencies, `.so` files, and Expo or Flutter config.
+Without that file or Python, gather the same facts by hand: `targetSdk` and SDK versions, all manifests, dependencies, `.so` files, and Expo or Flutter config.
 
 **3. Fill in the facts it cannot see.** Ask the user, or take them from project files:
 
@@ -81,13 +81,13 @@ When a rule concerns something users can reach, find every instance, not the fir
 
 **6. Try to disprove every CRITICAL and HIGH finding.** Reread the rule's scope and exemptions, then look for what would make the finding wrong. If the trace has a gap, downgrade it to `Verify`.
 
-**7. Write the report and validate it.** Follow [references/report-template.md](references/report-template.md), then run:
+**7. Write the report and validate it.** Follow [references/report-template.md](references/report-template.md). If this skill's folder has `scripts/validate_report.py`, run:
 
 ```bash
 python3 -B SKILL_FOLDER/scripts/validate_report.py REPORT.md
 ```
 
-It prints `OK` when the report passes. Fix what it reports and rerun until it does. If Python or the `scripts` folder is unavailable, check the report against the template by hand.
+It prints `OK` when the report passes. Fix what it reports and rerun until it does. Without that file or Python, check the report against the template by hand.
 
 ## Diagnose a notice
 
