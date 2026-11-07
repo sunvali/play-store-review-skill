@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.2.2 - 2026-11-07
+
+### Fixed
+
+- CI publishes a `directory` branch that holds only Markdown, text, JSON, YAML, and images, the file types Anthropic's plugin directory accepts from unverified organizations
+- The skill falls back to manual checks when its `scripts` folder is missing, as it is in that build
+
 ## 2.2.1 - 2026-11-01
 
 ### Fixed
