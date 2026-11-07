@@ -1,0 +1,285 @@
+{
+  "verified": "2026-10-31",
+  "classes": [
+    "restricted-declaration",
+    "must-have-core-use",
+    "special-access",
+    "foreground-service",
+    "advertising-id",
+    "normal-risky"
+  ],
+  "permissions": {
+    "android.permission.ACCESS_BACKGROUND_LOCATION": {
+      "class": "restricted-declaration",
+      "alternative": "Foreground location, Geofencing API"
+    },
+    "android.permission.ACCESS_FINE_LOCATION": {
+      "class": "must-have-core-use",
+      "alternative": "ACCESS_COARSE_LOCATION"
+    },
+    "android.permission.ACCESS_NOTIFICATION_POLICY": {
+      "class": "special-access",
+      "alternative": "Scoped alternatives per feature"
+    },
+    "android.permission.ACTIVITY_RECOGNITION": {
+      "class": "must-have-core-use",
+      "alternative": "Request only when the feature is in use"
+    },
+    "android.permission.BIND_ACCESSIBILITY_SERVICE": {
+      "class": "restricted-declaration",
+      "alternative": "Narrower platform APIs"
+    },
+    "android.permission.BIND_DEVICE_ADMIN": {
+      "class": "special-access",
+      "alternative": "Scoped alternatives per feature"
+    },
+    "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE": {
+      "class": "special-access",
+      "alternative": "Scoped alternatives per feature"
+    },
+    "android.permission.BIND_VPN_SERVICE": {
+      "class": "restricted-declaration",
+      "alternative": "None for VPN apps; others use platform network APIs"
+    },
+    "android.permission.BLUETOOTH_ADVERTISE": {
+      "class": "normal-risky",
+      "alternative": "Request after a user action, with a rationale"
+    },
+    "android.permission.BLUETOOTH_CONNECT": {
+      "class": "normal-risky",
+      "alternative": "Request after a user action, with a rationale"
+    },
+    "android.permission.BLUETOOTH_SCAN": {
+      "class": "normal-risky",
+      "alternative": "Request after a user action, with a rationale"
+    },
+    "android.permission.BODY_SENSORS": {
+      "class": "restricted-declaration",
+      "alternative": "Health Connect"
+    },
+    "android.permission.BODY_SENSORS_BACKGROUND": {
+      "class": "restricted-declaration",
+      "alternative": "Health Connect"
+    },
+    "android.permission.CALL_PHONE": {
+      "class": "must-have-core-use",
+      "alternative": "Platform call intents (ACTION_DIAL)"
+    },
+    "android.permission.CAMERA": {
+      "class": "must-have-core-use",
+      "alternative": "Request only when the feature is in use"
+    },
+    "android.permission.FOREGROUND_SERVICE": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_CAMERA": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_DATA_SYNC": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_HEALTH": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_LOCATION": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_MICROPHONE": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_PHONE_CALL": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_SPECIAL_USE": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED": {
+      "class": "foreground-service",
+      "alternative": "Declare only the matching foreground service type and complete the Console declaration"
+    },
+    "android.permission.GET_ACCOUNTS": {
+      "class": "must-have-core-use",
+      "alternative": "Request only when the feature is in use"
+    },
+    "android.permission.MANAGE_EXTERNAL_STORAGE": {
+      "class": "restricted-declaration",
+      "alternative": "Storage Access Framework or MediaStore"
+    },
+    "android.permission.MANAGE_MEDIA": {
+      "class": "special-access",
+      "alternative": "Scoped alternatives per feature"
+    },
+    "android.permission.NEARBY_WIFI_DEVICES": {
+      "class": "normal-risky",
+      "alternative": "Request after a user action, with a rationale"
+    },
+    "android.permission.PACKAGE_USAGE_STATS": {
+      "class": "special-access",
+      "alternative": "Scoped alternatives per feature"
+    },
+    "android.permission.POST_NOTIFICATIONS": {
+      "class": "normal-risky",
+      "alternative": "Request after a user action, with a rationale"
+    },
+    "android.permission.PROCESS_OUTGOING_CALLS": {
+      "class": "restricted-declaration",
+      "alternative": "SMS Retriever, Digital Credentials API or the platform call UI"
+    },
+    "android.permission.QUERY_ALL_PACKAGES": {
+      "class": "restricted-declaration",
+      "alternative": "<queries> declarations"
+    },
+    "android.permission.READ_CALENDAR": {
+      "class": "must-have-core-use",
+      "alternative": "Request only when the feature is in use"
+    },
+    "android.permission.READ_CALL_LOG": {
+      "class": "restricted-declaration",
+      "alternative": "SMS Retriever, Digital Credentials API or the platform call UI"
+    },
+    "android.permission.READ_CONTACTS": {
+      "class": "must-have-core-use",
+      "alternative": "Android Contact Picker"
+    },
+    "android.permission.READ_EXTERNAL_STORAGE": {
+      "class": "must-have-core-use",
+      "alternative": "Photo Picker or scoped storage"
+    },
+    "android.permission.READ_MEDIA_AUDIO": {
+      "class": "normal-risky",
+      "alternative": "Request after a user action, with a rationale"
+    },
+    "android.permission.READ_MEDIA_IMAGES": {
+      "class": "restricted-declaration",
+      "alternative": "Photo Picker (PickVisualMedia / ACTION_PICK_IMAGES)"
+    },
+    "android.permission.READ_MEDIA_VIDEO": {
+      "class": "restricted-declaration",
+      "alternative": "Photo Picker (PickVisualMedia / ACTION_PICK_IMAGES)"
+    },
+    "android.permission.READ_MEDIA_VISUAL_USER_SELECTED": {
+      "class": "normal-risky",
+      "alternative": "Request after a user action, with a rationale"
+    },
+    "android.permission.READ_PHONE_NUMBERS": {
+      "class": "must-have-core-use",
+      "alternative": "Platform call intents (ACTION_DIAL)"
+    },
+    "android.permission.READ_PHONE_STATE": {
+      "class": "must-have-core-use",
+      "alternative": "Request only when the feature is in use"
+    },
+    "android.permission.READ_SMS": {
+      "class": "restricted-declaration",
+      "alternative": "SMS Retriever or SMS User Consent API"
+    },
+    "android.permission.RECEIVE_MMS": {
+      "class": "restricted-declaration",
+      "alternative": "SMS Retriever or SMS User Consent API"
+    },
+    "android.permission.RECEIVE_SMS": {
+      "class": "restricted-declaration",
+      "alternative": "SMS Retriever or SMS User Consent API"
+    },
+    "android.permission.RECEIVE_WAP_PUSH": {
+      "class": "restricted-declaration",
+      "alternative": "SMS Retriever or SMS User Consent API"
+    },
+    "android.permission.RECORD_AUDIO": {
+      "class": "must-have-core-use",
+      "alternative": "Request only when the feature is in use"
+    },
+    "android.permission.REQUEST_INSTALL_PACKAGES": {
+      "class": "restricted-declaration",
+      "alternative": "Play In-App Updates, or user-initiated installs only for package installers"
+    },
+    "android.permission.SCHEDULE_EXACT_ALARM": {
+      "class": "special-access",
+      "alternative": "Inexact alarms or WorkManager"
+    },
+    "android.permission.SEND_SMS": {
+      "class": "restricted-declaration",
+      "alternative": "SMS Retriever or SMS User Consent API"
+    },
+    "android.permission.SYSTEM_ALERT_WINDOW": {
+      "class": "special-access",
+      "alternative": "Normal views or notifications"
+    },
+    "android.permission.USE_BIOMETRIC": {
+      "class": "normal-risky",
+      "alternative": "Request after a user action, with a rationale"
+    },
+    "android.permission.USE_EXACT_ALARM": {
+      "class": "restricted-declaration",
+      "alternative": "SCHEDULE_EXACT_ALARM, WorkManager or inexact alarms"
+    },
+    "android.permission.USE_FINGERPRINT": {
+      "class": "normal-risky",
+      "alternative": "Request after a user action, with a rationale"
+    },
+    "android.permission.USE_FULL_SCREEN_INTENT": {
+      "class": "restricted-declaration",
+      "alternative": "High-priority notification"
+    },
+    "android.permission.WRITE_CALENDAR": {
+      "class": "must-have-core-use",
+      "alternative": "Request only when the feature is in use"
+    },
+    "android.permission.WRITE_CALL_LOG": {
+      "class": "restricted-declaration",
+      "alternative": "SMS Retriever, Digital Credentials API or the platform call UI"
+    },
+    "android.permission.WRITE_CONTACTS": {
+      "class": "must-have-core-use",
+      "alternative": "Scoped platform intents"
+    },
+    "android.permission.WRITE_EXTERNAL_STORAGE": {
+      "class": "must-have-core-use",
+      "alternative": "Photo Picker or scoped storage"
+    },
+    "android.permission.WRITE_SETTINGS": {
+      "class": "special-access",
+      "alternative": "Scoped alternatives per feature"
+    },
+    "android.permission.WRITE_SMS": {
+      "class": "restricted-declaration",
+      "alternative": "SMS Retriever or SMS User Consent API"
+    },
+    "android.permission.health.*": {
+      "class": "restricted-declaration",
+      "alternative": "Request only the Health Connect data types the feature needs"
+    },
+    "com.google.android.gms.permission.AD_ID": {
+      "class": "advertising-id",
+      "alternative": "Remove with tools:node=\"remove\" if the app has no ads or attribution use"
+    }
+  }
+}

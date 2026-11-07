@@ -1,0 +1,301 @@
+{
+  "verified": "2026-10-31",
+  "basis": "Coordinates are well-known package names matched by prefix; each was not individually re-checked against a registry. Gradle entries are group:artifact, pub and npm entries are package names. Vendor-repo entries (com.ironsource.sdk:mediationsdk, com.mbridge.msdk.oversea, com.singular.sdk:singular_sdk, com.mapbox.maps:android, com.tiktok.open.sdk) are real but could not be confirmed on public registries.",
+  "categories": {
+    "ads": [
+      "@capacitor-community/admob",
+      "admob-plus-cordova",
+      "applovin_max",
+      "com.adcolony:sdk",
+      "com.amazon.android:aps-sdk",
+      "com.applovin.mediation:",
+      "com.applovin:applovin-sdk",
+      "com.appodeal.ads:sdk",
+      "com.chartboost:chartboost-sdk",
+      "com.facebook.android:audience-network-sdk",
+      "com.fyber:marketplace-sdk",
+      "com.google.ads.mediation",
+      "com.google.android.gms:play-services-ads",
+      "com.google.android.libraries.ads.mobile.sdk",
+      "com.inmobi.monetization",
+      "com.ironsource.sdk:mediationsdk",
+      "com.mbridge.msdk.oversea",
+      "com.my.target:mytarget-sdk",
+      "com.startapp:inapp-sdk",
+      "com.unity3d.ads-mediation:mediation-sdk",
+      "com.unity3d.ads:unity-ads",
+      "com.vungle:vungle-ads",
+      "com.yandex.android:mobileads",
+      "cordova-admob-plus",
+      "cordova-plugin-admob-free",
+      "expo-ads-admob",
+      "expo-ads-facebook",
+      "facebook_audience_network",
+      "google_mobile_ads",
+      "ironsource_mediation",
+      "pangle_flutter",
+      "react-native-applovin-max",
+      "react-native-appodeal",
+      "react-native-google-mobile-ads",
+      "unity_ads_plugin"
+    ],
+    "analytics": [
+      "@amplitude/analytics-react-native",
+      "@capacitor-community/firebase-analytics",
+      "@capacitor-firebase/analytics",
+      "@datadog/mobile-react-native",
+      "@react-native-firebase/analytics",
+      "@segment/analytics-react-native",
+      "amplitude_flutter",
+      "com.amplitude:analytics-android",
+      "com.amplitude:android-sdk",
+      "com.datadoghq:dd-sdk-android-rum",
+      "com.flurry.android:analytics",
+      "com.google.android.gms:play-services-analytics",
+      "com.google.android.gms:play-services-measurement",
+      "com.google.firebase:firebase-analytics",
+      "com.google.firebase:firebase-perf",
+      "com.heapanalytics.android:heap-android-client",
+      "com.microsoft.appcenter:appcenter-analytics",
+      "com.microsoft.clarity:clarity",
+      "com.mixpanel.android:mixpanel-android",
+      "com.posthog:posthog-android",
+      "com.segment.analytics.android:analytics",
+      "com.segment.analytics.kotlin:android",
+      "datadog_flutter_plugin",
+      "facebook_app_events",
+      "firebase_analytics",
+      "firebase_performance",
+      "io.embrace:embrace-android-sdk",
+      "matomo_tracker",
+      "mixpanel-react-native",
+      "mixpanel_flutter",
+      "posthog-react-native",
+      "posthog_flutter",
+      "segment_analytics"
+    ],
+    "attribution": [
+      "@awesome-cordova-plugins/appsflyer",
+      "adjust_sdk",
+      "appsflyer_sdk",
+      "com.adjust.sdk:adjust-android",
+      "com.android.installreferrer:installreferrer",
+      "com.appsflyer:af-android-sdk",
+      "com.google.android.gms:play-services-ads-identifier",
+      "com.google.android.gms:play-services-appset",
+      "com.kochava.tracker",
+      "com.singular.sdk:singular_sdk",
+      "com.tenjin:android-sdk",
+      "cordova-plugin-appsflyer-sdk",
+      "flutter_branch_sdk",
+      "io.branch.sdk.android:library",
+      "react-native-adjust",
+      "react-native-appsflyer",
+      "react-native-branch",
+      "react-native-kochava-tracker",
+      "singular-react-native",
+      "singular_flutter_sdk"
+    ],
+    "crash": [
+      "@bugsnag/react-native",
+      "@react-native-firebase/crashlytics",
+      "@sentry/capacitor",
+      "@sentry/react-native",
+      "ch.acra:acra",
+      "com.bugsnag:bugsnag-android",
+      "com.google.firebase:firebase-crashlytics",
+      "firebase_crashlytics",
+      "io.sentry:sentry",
+      "io.sentry:sentry-android",
+      "sentry_flutter"
+    ],
+    "billing": [
+      "@capgo/native-purchases",
+      "@revenuecat/purchases-capacitor",
+      "adapty_flutter",
+      "com.amazon.device:amazon-appstore-sdk",
+      "com.android.billingclient:billing",
+      "com.apphud:ApphudSDK-Android",
+      "com.google.androidbrowserhelper:billing",
+      "com.revenuecat.purchases:purchases",
+      "cordova-plugin-purchase",
+      "expo-iap",
+      "expo-in-app-purchases",
+      "flutter_inapp_purchase",
+      "in_app_purchase",
+      "io.adapty:android-sdk",
+      "io.qonversion.android.sdk:sdk",
+      "purchases_flutter",
+      "purchases_ui_flutter",
+      "qonversion_flutter",
+      "react-native-adapty",
+      "react-native-iap",
+      "react-native-purchases"
+    ],
+    "auth": [
+      "@react-native-firebase/auth",
+      "@react-native-google-signin/google-signin",
+      "androidx.credentials:credentials",
+      "com.auth0.android:auth0",
+      "com.facebook.android:facebook-login",
+      "com.google.android.gms:play-services-auth",
+      "com.google.firebase:firebase-auth",
+      "expo-apple-authentication",
+      "expo-auth-session",
+      "firebase_auth",
+      "flutter_appauth",
+      "flutter_facebook_auth",
+      "google_sign_in",
+      "net.openid:appauth",
+      "react-native-app-auth",
+      "sign_in_with_apple"
+    ],
+    "payments": [
+      "@stripe/stripe-react-native",
+      "com.adyen.checkout",
+      "com.braintreepayments.api",
+      "com.google.android.gms:play-services-wallet",
+      "com.stripe:stripe-android",
+      "flutter_stripe"
+    ],
+    "ai": [
+      "@anthropic-ai/sdk",
+      "@google/genai",
+      "@google/generative-ai",
+      "com.aallam.openai:openai-client",
+      "com.anthropic:anthropic-java",
+      "com.google.ai.client.generativeai",
+      "com.google.ai.edge.litert",
+      "com.google.firebase:firebase-ai",
+      "com.google.firebase:firebase-vertexai",
+      "com.google.genai:google-genai",
+      "com.google.mediapipe:tasks-genai",
+      "com.google.mlkit:genai-",
+      "com.microsoft.onnxruntime:onnxruntime-android",
+      "com.openai:openai-java",
+      "dart_openai",
+      "firebase_ai",
+      "google_generative_ai",
+      "openai",
+      "openai_dart",
+      "org.tensorflow:tensorflow-lite"
+    ],
+    "maps": [
+      "@react-native-community/geolocation",
+      "@rnmapbox/maps",
+      "com.google.android.gms:play-services-location",
+      "com.google.android.gms:play-services-maps",
+      "com.google.maps.android:android-maps-utils",
+      "com.mapbox.mapboxsdk",
+      "com.mapbox.maps:android",
+      "expo-location",
+      "flutter_map",
+      "geolocator",
+      "google_maps_flutter",
+      "mapbox_maps_flutter",
+      "org.osmdroid:osmdroid-android",
+      "react-native-geolocation-service",
+      "react-native-maps"
+    ],
+    "social": [
+      "com.facebook.android:facebook-",
+      "com.linecorp.linesdk",
+      "com.snap.adkit:adkit",
+      "com.snap.creativekit:creativekit",
+      "com.snap.loginkit:loginkit",
+      "com.tiktok.open.sdk",
+      "react-native-fbsdk-next"
+    ],
+    "push": [
+      "@react-native-firebase/messaging",
+      "com.braze:android-sdk-ui",
+      "com.clevertap.android:clevertap-android-sdk",
+      "com.google.firebase:firebase-messaging",
+      "com.onesignal:",
+      "com.urbanairship.android:urbanairship-",
+      "expo-notifications",
+      "firebase_messaging",
+      "onesignal_flutter",
+      "react-native-onesignal"
+    ],
+    "webview-frameworks": [
+      "@capacitor/android",
+      "@capacitor/core",
+      "androidx.webkit:webkit",
+      "com.google.androidbrowserhelper:",
+      "cordova-android",
+      "flutter_inappwebview",
+      "org.apache.cordova:",
+      "react-native-webview",
+      "webview_flutter"
+    ],
+    "play-core": [
+      "com.google.android.play:core"
+    ]
+  },
+  "unityPackages": {
+    "com.unity.ads": "ads",
+    "com.unity.purchasing": "billing",
+    "com.unity.services.analytics": "analytics",
+    "com.unity.services.mediation": "ads"
+  },
+  "mayAddPermissions": [
+    {
+      "match": "com.google.android.gms:play-services-ads",
+      "adds": [
+        "com.google.android.gms.permission.AD_ID"
+      ],
+      "basis": "Google documented",
+      "url": "https://support.google.com/googleplay/android-developer/answer/6048248"
+    },
+    {
+      "match": "com.google.android.gms:play-services-measurement",
+      "adds": [
+        "com.google.android.gms.permission.AD_ID"
+      ],
+      "basis": "field report, verify in the merged manifest",
+      "url": "https://github.com/selfxyz/self/pull/1953"
+    },
+    {
+      "match": "com.google.firebase:firebase-analytics",
+      "adds": [
+        "com.google.android.gms.permission.AD_ID"
+      ],
+      "basis": "field report, verify in the merged manifest",
+      "url": "https://github.com/selfxyz/self/pull/1953"
+    },
+    {
+      "match": "com.google.firebase:firebase-messaging",
+      "adds": [
+        "com.google.android.gms.permission.AD_ID"
+      ],
+      "basis": "field report, verify in the merged manifest",
+      "url": "https://github.com/selfxyz/self/pull/1953"
+    },
+    {
+      "match": "expo-audio",
+      "adds": [
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
+      "basis": "field report, verify in the merged manifest",
+      "url": "https://github.com/expo/expo/issues/39988"
+    },
+    {
+      "match": "expo-video",
+      "adds": [
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
+      "basis": "field report, verify in the merged manifest",
+      "url": "https://github.com/expo/expo/issues/39988"
+    },
+    {
+      "match": "@iternio/react-native-auto-play",
+      "adds": [
+        "androidx.car.app.CarAppService (service)",
+        "car app permissions"
+      ],
+      "basis": "field report, verify in the merged manifest",
+      "url": "https://github.com/cw0rley/Speed-Limit/pull/1"
+    }
+  ]
+}

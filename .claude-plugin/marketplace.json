@@ -1,0 +1,23 @@
+{
+  "name": "play-store-review",
+  "owner": {
+    "name": "sunvali"
+  },
+  "metadata": {
+    "description": "Google Play review skill for Claude Code"
+  },
+  "plugins": [
+    {
+      "name": "play-store-review",
+      "source": "./",
+      "description": "Evaluates Android apps against Google Play policies and release requirements",
+      "version": "2.2.3",
+      "author": {
+        "name": "sunvali"
+      },
+      "category": "compliance",
+      "tags": ["google-play", "android", "review", "policy", "kotlin", "flutter", "react-native"],
+      "strict": true
+    }
+  ]
+}
