@@ -5,8 +5,8 @@ license: MIT. See LICENSE.txt
 compatibility: Uses python3 for the bundled scripts when available and works without it. Browsing is optional but improves accuracy.
 metadata:
   author: sunvali
-  version: "2.2.1"
-  last-updated: "2026-11-01"
+  version: "2.2.2"
+  last-updated: "2026-11-07"
 ---
 
 # Google Play Review
@@ -47,7 +47,7 @@ python3 -B SKILL_FOLDER/scripts/scan_android.py PROJECT_DIR --output TEMP_FILE
 
 `SKILL_FOLDER` is the folder holding this file, and `TEMP_FILE` is any path outside the project. Read `sdk.app` for the installed app's values: its `scope` says where each came from, and other entries may belong to libraries, demos, or other form factors. When `sdk.app` says `ambiguous`, use `sdk.apps` and ask which app is shipping. `mayAddPermissions` lists permissions that dependencies are known to merge, which source manifests never show. Add `--artifact app-release.apk` or `.aab` if a release build exists, since only a built artifact shows the real merged manifest and native libraries. Everything in the scanner's `unknown` list goes into "Could not verify" unless you resolve it another way.
 
-If Python is unavailable, gather the same facts by hand: `targetSdk` and SDK versions, all manifests, dependencies, `.so` files, and Expo or Flutter config.
+If Python or the `scripts` folder is unavailable, gather the same facts by hand: `targetSdk` and SDK versions, all manifests, dependencies, `.so` files, and Expo or Flutter config.
 
 **3. Fill in the facts it cannot see.** Ask the user, or take them from project files:
 
@@ -87,7 +87,7 @@ When a rule concerns something users can reach, find every instance, not the fir
 python3 -B SKILL_FOLDER/scripts/validate_report.py REPORT.md
 ```
 
-It prints `OK` when the report passes. Fix what it reports and rerun until it does. If Python is unavailable, check the report against the template by hand.
+It prints `OK` when the report passes. Fix what it reports and rerun until it does. If Python or the `scripts` folder is unavailable, check the report against the template by hand.
 
 ## Diagnose a notice
 

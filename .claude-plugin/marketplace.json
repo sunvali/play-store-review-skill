@@ -11,7 +11,7 @@
       "name": "play-store-review",
       "source": "./",
       "description": "Evaluates Android apps against Google Play policies and release requirements",
-      "version": "2.2.1",
+      "version": "2.2.2",
       "author": {
         "name": "sunvali"
       },
